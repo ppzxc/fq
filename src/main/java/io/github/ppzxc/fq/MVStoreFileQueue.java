@@ -106,18 +106,20 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   }
 
   private <R> R acquireWriteLock(SupplierWithException<R, Exception> action) {
+    Exception exception = null;
     for (int attempt = 0; attempt < properties.getMaxRetry(); attempt++) {
       lock.writeLock().lock();
       try {
         return action.get();
       } catch (Exception e) {
         log.info("Failed to acquire write lock: retry {}", attempt, e);
+        exception = e;
       } finally {
         lock.writeLock().unlock();
       }
     }
     throw new FileQueueException(
-        "Failed to acquire write lock after " + properties.getMaxRetry() + " attempts");
+        "Failed to acquire write lock after " + properties.getMaxRetry() + " attempts", exception);
   }
 
   private <R> R acquireReadLock(SupplierWithException<R, Exception> action) {
