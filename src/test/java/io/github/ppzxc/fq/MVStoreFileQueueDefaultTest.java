@@ -1,6 +1,7 @@
 package io.github.ppzxc.fq;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -60,5 +61,21 @@ class MVStoreFileQueueDefaultTest {
     for (int i = 0; i < given.size(); i++) {
       assertThat(actual.get(i)).isEqualTo(given.get(i));
     }
+  }
+
+  @DisplayName("fileName cannot be null or empty")
+  @Test
+  void t1() {
+    // given
+    MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName(null);
+
+    // when, then
+    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
+        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> {
+          assertThat(exception.getMessage()).isEqualTo(
+              "MVStoreFileQueueProperties.fileName cannot be null or empty");
+        });
   }
 }

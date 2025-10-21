@@ -22,7 +22,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   private final AtomicLong totalCommits;
 
   MVStoreFileQueue(MVStoreFileQueueProperties properties) {
-    this.properties = properties;
+    this.properties = validation(properties);
     this.lock = new ReentrantReadWriteLock(properties.isFair());
 
     try {
@@ -55,6 +55,14 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     } catch (Exception e) {
       throw new FileQueueException("Failed to initialize queue", e);
     }
+  }
+
+  private MVStoreFileQueueProperties validation(MVStoreFileQueueProperties properties) {
+    if (properties.getFileName() == null || properties.getFileName().trim().isEmpty()) {
+      throw new IllegalArgumentException(
+          "MVStoreFileQueueProperties.fileName cannot be null or empty");
+    }
+    return properties;
   }
 
   @Override
