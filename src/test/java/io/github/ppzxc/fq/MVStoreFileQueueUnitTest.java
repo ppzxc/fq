@@ -14,6 +14,7 @@ class MVStoreFileQueueUnitTest {
   void t0() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName(String.format("test_queue_%d.db", System.currentTimeMillis()));
     mvStoreFileQueueProperties.setAutoCommitDisabled(true);
 
     // when
@@ -28,6 +29,7 @@ class MVStoreFileQueueUnitTest {
   void t1() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName(String.format("test_queue_%d.db", System.currentTimeMillis()));
     mvStoreFileQueueProperties.setMaxSize(0);
 
     // when
@@ -47,6 +49,7 @@ class MVStoreFileQueueUnitTest {
   void t2() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName(String.format("test_queue_%d.db", System.currentTimeMillis()));
 
     // when
     FileQueue<String> fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);

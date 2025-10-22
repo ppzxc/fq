@@ -72,10 +72,27 @@ class MVStoreFileQueueDefaultTest {
 
     // when, then
     assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
-        .isInstanceOf(IllegalArgumentException.class)
-        .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> {
-          assertThat(exception.getMessage()).isEqualTo(
-              "MVStoreFileQueueProperties.fileName cannot be null or empty");
-        });
+      .isInstanceOf(IllegalArgumentException.class)
+      .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> {
+        assertThat(exception.getMessage()).isEqualTo(
+          "MVStoreFileQueueProperties.fileName cannot be null or empty");
+      });
+  }
+
+  @DisplayName("queueName cannot be null or empty")
+  @Test
+  void t2() {
+    // given
+    MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName("test_queue.db");
+    mvStoreFileQueueProperties.setQueueName(null);
+
+    // when, then
+    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
+      .isInstanceOf(IllegalArgumentException.class)
+      .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> {
+        assertThat(exception.getMessage()).isEqualTo(
+          "MVStoreFileQueueProperties.queueName cannot be null or empty");
+      });
   }
 }

@@ -62,6 +62,9 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       throw new IllegalArgumentException(
           "MVStoreFileQueueProperties.fileName cannot be null or empty");
     }
+    if (properties.getQueueName() == null || properties.getQueueName().trim().isEmpty()) {
+      throw new IllegalArgumentException("MVStoreFileQueueProperties.queueName cannot be null or empty");
+    }
     return properties;
   }
 
