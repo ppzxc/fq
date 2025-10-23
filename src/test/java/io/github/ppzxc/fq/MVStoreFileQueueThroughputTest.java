@@ -2,6 +2,8 @@ package io.github.ppzxc.fq;
 
 import com.google.common.base.Stopwatch;
 import java.io.File;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +13,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class MVStoreFileQueueThroughputTest {
 
+  public static final Random RANDOM = new Random();
   private static final String FILE_NAME = "test_queue.db";
   private FileQueue<String> fileQueue;
 
@@ -37,10 +40,10 @@ class MVStoreFileQueueThroughputTest {
   @DisplayName("all enqueue, all dequeue on single thread")
   @ParameterizedTest
   @CsvSource({
-      "1000, 1000000",
-      "10000, 1000000",
-      "100000, 1000000",
-      "1000000, 1000000"
+    "1000, 1000000",
+    "10000, 1000000",
+    "100000, 1000000",
+    "1000000, 1000000"
   })
   void t1(int batchSize, int operations) {
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
@@ -72,7 +75,7 @@ class MVStoreFileQueueThroughputTest {
   @DisplayName("all enqueue, all dequeue on multi thread")
   @ParameterizedTest
   @CsvSource({
-      "2, 10000, 1000000",
+    "2, 10000, 1000000",
   })
   void t2(int threads, int batchSize, int operations) throws InterruptedException {
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
@@ -125,5 +128,87 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
     fileQueue.metric("TEST");
+  }
+
+  @Timeout(1000 * 60 * 5)
+  @DisplayName("large size payload")
+  @ParameterizedTest
+  @CsvSource({
+    "1024, 1000, 100000",
+    "2048, 10000, 100000",
+    "4096, 100000, 100000",
+    "8192, 1000000, 100000"
+  })
+  void t3(int payloadLength, int batchSize, int operations) {
+    MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName(FILE_NAME);
+    mvStoreFileQueueProperties.setBatchSize(batchSize);
+    fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+
+    Stopwatch enqueueStartTime = Stopwatch.createStarted();
+    // enqueue
+    for (int i = 0; i < operations; i++) {
+      fileQueue.enqueue(getAlphabet(payloadLength) + i);
+    }
+    Stopwatch enqueueEndTime = enqueueStartTime.stop();
+    Stopwatch dequeueStartTime = Stopwatch.createStarted();
+    // dequeue
+    for (int i = 0; i < operations; i++) {
+      fileQueue.dequeue();
+    }
+    Stopwatch dequeueEndTime = dequeueStartTime.stop();
+
+    System.out.printf("BatchSize=%d operations=%d%n", batchSize, operations);
+    System.out.printf("enqueue=%s%n", enqueueEndTime);
+    System.out.printf("dequeue=%s%n", dequeueEndTime);
+    System.out.println("----------------------------");
+    fileQueue.metric("TEST");
+  }
+
+  @Timeout(1000 * 60 * 5)
+  @DisplayName("large size payload, same batch size")
+  @ParameterizedTest
+  @CsvSource({
+    "1024, 1000, 100000",
+    "2048, 1000, 100000",
+    "4096, 1000, 100000",
+    "8192, 1000, 100000"
+  })
+  void t4(int payloadLength, int batchSize, int operations) {
+    MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
+    mvStoreFileQueueProperties.setFileName(FILE_NAME);
+    mvStoreFileQueueProperties.setBatchSize(batchSize);
+    fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+
+    Stopwatch enqueueStartTime = Stopwatch.createStarted();
+    // enqueue
+    for (int i = 0; i < operations; i++) {
+      fileQueue.enqueue(getAlphabet(payloadLength) + i);
+    }
+    Stopwatch enqueueEndTime = enqueueStartTime.stop();
+    Stopwatch dequeueStartTime = Stopwatch.createStarted();
+    // dequeue
+    for (int i = 0; i < operations; i++) {
+      fileQueue.dequeue();
+    }
+    Stopwatch dequeueEndTime = dequeueStartTime.stop();
+
+    System.out.printf("BatchSize=%d operations=%d%n", batchSize, operations);
+    System.out.printf("enqueue=%s%n", enqueueEndTime);
+    System.out.printf("dequeue=%s%n", dequeueEndTime);
+    System.out.println("----------------------------");
+    fileQueue.metric("TEST");
+  }
+
+  private String getAlphabet(int targetStringLength) {
+    int leftLimit = 97; // letter 'a'
+    int rightLimit = 122; // letter 'z'
+    StringBuilder buffer = new StringBuilder(targetStringLength);
+    for (int i = 0; i < targetStringLength; i++) {
+      int randomLimitedInt = leftLimit + (int)
+        (ThreadLocalRandom.current().nextFloat() * (rightLimit - leftLimit + 1));
+      buffer.append((char) randomLimitedInt);
+    }
+    return buffer.toString();
   }
 }
