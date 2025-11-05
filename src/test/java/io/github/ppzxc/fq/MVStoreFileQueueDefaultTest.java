@@ -21,7 +21,7 @@ class MVStoreFileQueueDefaultTest {
   void setUp() {
     File file = new File(FILE_NAME);
     if (file.exists()) {
-      file.delete();
+      file.deleteOnExit();
     }
   }
 
@@ -32,7 +32,7 @@ class MVStoreFileQueueDefaultTest {
     }
     File file = new File(FILE_NAME);
     if (file.exists()) {
-      file.delete();
+      file.deleteOnExit();
     }
   }
 
@@ -53,11 +53,11 @@ class MVStoreFileQueueDefaultTest {
     given.forEach(fileQueue::enqueue);
     List<String> actual = new ArrayList<>();
     while (!fileQueue.isEmpty()) {
-      actual.add(fileQueue.dequeue().get());
+      fileQueue.dequeue().ifPresent(actual::add);
     }
 
     // then
-    assertThat(actual.size()).isEqualTo(given.size());
+    assertThat(actual).hasSameSizeAs(given);
     for (int i = 0; i < given.size(); i++) {
       assertThat(actual.get(i)).isEqualTo(given.get(i));
     }
@@ -73,10 +73,8 @@ class MVStoreFileQueueDefaultTest {
     // when, then
     assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
       .isInstanceOf(IllegalArgumentException.class)
-      .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> {
-        assertThat(exception.getMessage()).isEqualTo(
-          "MVStoreFileQueueProperties.fileName cannot be null or empty");
-      });
+      .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
+        "MVStoreFileQueueProperties.fileName cannot be null or empty"));
   }
 
   @DisplayName("queueName cannot be null or empty")
@@ -90,9 +88,7 @@ class MVStoreFileQueueDefaultTest {
     // when, then
     assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
       .isInstanceOf(IllegalArgumentException.class)
-      .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> {
-        assertThat(exception.getMessage()).isEqualTo(
-          "MVStoreFileQueueProperties.queueName cannot be null or empty");
-      });
+      .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
+        "MVStoreFileQueueProperties.queueName cannot be null or empty"));
   }
 }

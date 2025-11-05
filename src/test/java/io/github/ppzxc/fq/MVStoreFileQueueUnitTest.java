@@ -17,11 +17,9 @@ class MVStoreFileQueueUnitTest {
     mvStoreFileQueueProperties.setFileName(String.format("test_queue_%d.db", System.currentTimeMillis()));
     mvStoreFileQueueProperties.setAutoCommitDisabled(true);
 
-    // when
-    FileQueue<String> fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
-
-    // then
-    fileQueue.close();
+    // when, then
+    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
+      .isNull();
   }
 
   @DisplayName("throw Queue is full exception")
