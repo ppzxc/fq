@@ -53,17 +53,17 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         return null;
       });
     } catch (Exception e) {
-      throw new FileQueueException("Failed to initialize queue", e);
+      throw new FileQueueException("[MVStoreFileQueue] Failed to initialize queue", e);
     }
   }
 
   private MVStoreFileQueueProperties validation(MVStoreFileQueueProperties properties) {
     if (properties.getFileName() == null || properties.getFileName().trim().isEmpty()) {
       throw new IllegalArgumentException(
-          "MVStoreFileQueueProperties.fileName cannot be null or empty");
+          "[MVStoreFileQueue] MVStoreFileQueueProperties.fileName cannot be null or empty");
     }
     if (properties.getQueueName() == null || properties.getQueueName().trim().isEmpty()) {
-      throw new IllegalArgumentException("MVStoreFileQueueProperties.queueName cannot be null or empty");
+      throw new IllegalArgumentException("[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty");
     }
     return properties;
   }
@@ -72,7 +72,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   public void enqueue(T value) {
     acquireWriteLock(() -> {
       if (size() >= properties.getMaxSize()) {
-        throw new FileQueueException("Queue is full: " + size() + " > " + properties.getMaxSize());
+        throw new FileQueueException("[MVStoreFileQueue] Queue is full: " + size() + " > " + properties.getMaxSize());
       }
       queue.put(tail.getAndIncrement(), value);
       commitIfNeeded();
@@ -105,12 +105,14 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   @Override
   public void metric(String name) {
     log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", name,
-        totalOperation, totalCommits, tail.get() - head.get(), head, tail);
+        totalOperation.get(), totalCommits.get(), tail.get() - head.get(), head.get(), tail.get());
   }
 
   @Override
   public void close() {
     acquireWriteLock(() -> {
+      long newVersion = mvStore.commit();
+      log.info("newVersion={} message=close", newVersion);
       mvStore.close();
       return null;
     });
@@ -123,14 +125,15 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       try {
         return action.get();
       } catch (Exception e) {
-        log.info("Failed to acquire write lock: retry {}", attempt, e);
+        log.info("[MVStoreFileQueue] Failed to acquire write lock: retry {}", attempt, e);
         exception = e;
+        sleepBackoff();
       } finally {
         lock.writeLock().unlock();
       }
     }
     throw new FileQueueException(
-        "Failed to acquire write lock after " + properties.getMaxRetry() + " attempts", exception);
+        "[MVStoreFileQueue] Failed to acquire write lock after " + properties.getMaxRetry() + " attempts", exception);
   }
 
   private <R> R acquireReadLock(SupplierWithException<R, Exception> action) {
@@ -140,12 +143,13 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         return action.get();
       } catch (Exception e) {
         log.info("Failed to acquire read lock: retry {}", attempt, e);
+        sleepBackoff();
       } finally {
         lock.readLock().unlock();
       }
     }
     throw new FileQueueException(
-        "Failed to acquire read lock after " + properties.getMaxRetry() + " attempts");
+        "[MVStoreFileQueue] Failed to acquire read lock after " + properties.getMaxRetry() + " attempts");
   }
 
   private void commitIfNeeded() {
@@ -171,5 +175,14 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   private interface SupplierWithException<R, E extends Exception> {
 
     R get() throws E;
+  }
+
+  private void sleepBackoff() {
+    try {
+      Thread.sleep(properties.getRetryBackoffMs());
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.warn("Backoff sleep interrupted", ie);
+    }
   }
 }

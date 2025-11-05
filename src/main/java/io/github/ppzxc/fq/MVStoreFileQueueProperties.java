@@ -22,4 +22,5 @@ public class MVStoreFileQueueProperties {
   private boolean fair = true;
   private int tryLockTimeout = 1;
   private TimeUnit tryLockTimeunit = TimeUnit.SECONDS;
+  private int retryBackoffMs = 100;
 }

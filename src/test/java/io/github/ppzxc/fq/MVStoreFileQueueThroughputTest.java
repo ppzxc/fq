@@ -3,16 +3,16 @@ package io.github.ppzxc.fq;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.base.Stopwatch;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -20,23 +20,13 @@ class MVStoreFileQueueThroughputTest {
 
   private static final String FILE_NAME = "test_queue.db";
   private FileQueue<String> fileQueue;
-
-  @BeforeEach
-  void setUp() {
-    File file = new File(FILE_NAME);
-    if (file.exists()) {
-      file.deleteOnExit();
-    }
-  }
+  @TempDir
+  Path tempDir;
 
   @AfterEach
   void tearDown() {
     if (fileQueue != null) {
       fileQueue.close();
-    }
-    File file = new File(FILE_NAME);
-    if (file.exists()) {
-      file.deleteOnExit();
     }
   }
 
@@ -52,7 +42,7 @@ class MVStoreFileQueueThroughputTest {
   void t1(int batchSize, int operations) {
     List<String> results = new ArrayList<>();
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(FILE_NAME);
+    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
 
@@ -87,7 +77,7 @@ class MVStoreFileQueueThroughputTest {
     ReentrantLock lock = new ReentrantLock();
     List<String> results = new ArrayList<>();
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(FILE_NAME);
+    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
 
@@ -147,7 +137,7 @@ class MVStoreFileQueueThroughputTest {
     assertThat(results).hasSize(operations * threads);
   }
 
-//  @Timeout(1000 * 60 * 5)
+  //  @Timeout(1000 * 60 * 5)
   @DisplayName("large size payload")
   @ParameterizedTest
   @CsvSource({
@@ -162,7 +152,7 @@ class MVStoreFileQueueThroughputTest {
   })
   void t3(int payloadLength, int batchSize, int operations) {
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(FILE_NAME);
+    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
 

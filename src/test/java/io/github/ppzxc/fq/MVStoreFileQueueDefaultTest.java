@@ -3,36 +3,26 @@ package io.github.ppzxc.fq;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class MVStoreFileQueueDefaultTest {
 
   private static final String FILE_NAME = "test_queue.db";
   private FileQueue<String> fileQueue;
-
-  @BeforeEach
-  void setUp() {
-    File file = new File(FILE_NAME);
-    if (file.exists()) {
-      file.deleteOnExit();
-    }
-  }
+  @TempDir
+  Path tempDir;
 
   @AfterEach
   void tearDown() {
     if (fileQueue != null) {
       fileQueue.close();
-    }
-    File file = new File(FILE_NAME);
-    if (file.exists()) {
-      file.deleteOnExit();
     }
   }
 
@@ -41,7 +31,7 @@ class MVStoreFileQueueDefaultTest {
   void t0() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(FILE_NAME);
+    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(100);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
     List<String> given = new ArrayList<>();
@@ -74,7 +64,7 @@ class MVStoreFileQueueDefaultTest {
     assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
       .isInstanceOf(IllegalArgumentException.class)
       .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
-        "MVStoreFileQueueProperties.fileName cannot be null or empty"));
+        "[MVStoreFileQueue] MVStoreFileQueueProperties.fileName cannot be null or empty"));
   }
 
   @DisplayName("queueName cannot be null or empty")
@@ -89,6 +79,6 @@ class MVStoreFileQueueDefaultTest {
     assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
       .isInstanceOf(IllegalArgumentException.class)
       .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
-        "MVStoreFileQueueProperties.queueName cannot be null or empty"));
+        "[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty"));
   }
 }

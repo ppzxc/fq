@@ -22,6 +22,7 @@ dependencies {
     testImplementation(platform(rootProject.libs.org.junit.bom))
     testImplementation(rootProject.libs.org.junit.jupiter)
     testImplementation(rootProject.libs.org.assertj.core)
+    testImplementation(rootProject.libs.org.awaitility)
     testRuntimeOnly(rootProject.libs.org.junit.platform)
 }
 
