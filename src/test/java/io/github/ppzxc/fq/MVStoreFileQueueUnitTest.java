@@ -43,7 +43,7 @@ class MVStoreFileQueueUnitTest {
       .isInstanceOfSatisfying(FileQueueException.class, e -> {
         assertThat(e.getMessage()).isEqualTo("[MVStoreFileQueue] Failed to acquire write lock after 3 attempts");
         assertThat(e.getCause()).isInstanceOf(FileQueueException.class);
-        assertThat(e.getCause().getMessage()).isEqualTo("Queue is full: 0 > 0");
+        assertThat(e.getCause().getMessage()).isEqualTo("[MVStoreFileQueue] Queue is full: 0 > 0");
       });
   }
 
