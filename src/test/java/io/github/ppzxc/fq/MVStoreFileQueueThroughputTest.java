@@ -63,7 +63,7 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("enqueue=%s%n", enqueueEndTime);
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
-    fileQueue.metric("TEST");
+    fileQueue.metric();
     assertThat(results).hasSize(operations);
   }
 
@@ -133,7 +133,7 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("enqueue=%s%n", enqueueEndTime);
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
-    fileQueue.metric("TEST");
+    fileQueue.metric();
     assertThat(results).hasSize(operations * threads);
   }
 
@@ -173,7 +173,7 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("enqueue=%s%n", enqueueEndTime);
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
-    fileQueue.metric("TEST");
+    fileQueue.metric();
     fileQueue.close();
     assertThat(fileQueue.isEmpty()).isTrue();
   }

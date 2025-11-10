@@ -12,7 +12,7 @@ public interface FileQueue<T> {
 
   long size();
 
-  void metric(String name);
+  void metric();
 
   void close();
 }

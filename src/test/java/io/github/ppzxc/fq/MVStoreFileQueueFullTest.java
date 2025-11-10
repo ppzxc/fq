@@ -71,7 +71,7 @@ class MVStoreFileQueueFullTest {
     for (int i = 0; i < properties.getBatchSize() * 2; i++) {
       queue.enqueue(i);
     }
-    queue.metric("commit-test");
+    queue.metric();
     // no exception = success
     assertThat(queue.size()).isEqualTo(properties.getBatchSize() * 2L);
   }

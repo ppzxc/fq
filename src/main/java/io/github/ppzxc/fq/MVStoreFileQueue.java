@@ -27,11 +27,11 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
     try {
       Builder builder = new Builder()
-          .fileName(properties.getFileName())
-          .autoCompactFillRate(properties.getAutoCompactFillRate())
-          .cacheSize(properties.getCacheSize()) // read
-          .autoCommitBufferSize(properties.getAutoCommitBufferSize()) // write
-          .backgroundExceptionHandler((t, e) -> log.error("message=uncaught exception", e));
+        .fileName(properties.getFileName())
+        .autoCompactFillRate(properties.getAutoCompactFillRate())
+        .cacheSize(properties.getCacheSize()) // read
+        .autoCommitBufferSize(properties.getAutoCommitBufferSize()) // write
+        .backgroundExceptionHandler((t, e) -> log.error("message=uncaught exception", e));
       if (properties.isUseCompress()) {
         builder.compress();
       }
@@ -60,10 +60,11 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   private MVStoreFileQueueProperties validation(MVStoreFileQueueProperties properties) {
     if (properties.getFileName() == null || properties.getFileName().trim().isEmpty()) {
       throw new IllegalArgumentException(
-          "[MVStoreFileQueue] MVStoreFileQueueProperties.fileName cannot be null or empty");
+        "[MVStoreFileQueue] MVStoreFileQueueProperties.fileName cannot be null or empty");
     }
     if (properties.getQueueName() == null || properties.getQueueName().trim().isEmpty()) {
-      throw new IllegalArgumentException("[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty");
+      throw new IllegalArgumentException(
+        "[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty");
     }
     return properties;
   }
@@ -103,9 +104,9 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   }
 
   @Override
-  public void metric(String name) {
-    log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", name,
-        totalOperation.get(), totalCommits.get(), tail.get() - head.get(), head.get(), tail.get());
+  public void metric() {
+    log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", properties.getQueueName(),
+      totalOperation.get(), totalCommits.get(), tail.get() - head.get(), head.get(), tail.get());
   }
 
   @Override
@@ -133,7 +134,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       }
     }
     throw new FileQueueException(
-        "[MVStoreFileQueue] Failed to acquire write lock after " + properties.getMaxRetry() + " attempts", exception);
+      "[MVStoreFileQueue] Failed to acquire write lock after " + properties.getMaxRetry() + " attempts", exception);
   }
 
   private <R> R acquireReadLock(SupplierWithException<R, Exception> action) {
@@ -149,7 +150,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       }
     }
     throw new FileQueueException(
-        "[MVStoreFileQueue] Failed to acquire read lock after " + properties.getMaxRetry() + " attempts");
+      "[MVStoreFileQueue] Failed to acquire read lock after " + properties.getMaxRetry() + " attempts");
   }
 
   private void commitIfNeeded() {
@@ -157,15 +158,15 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       if (properties.isAutoCommitDisabled()) {
         if (log.isDebugEnabled()) {
           log.debug("total={} commits={} batch={} message=commit", totalOperation.get(),
-              totalCommits.get(), properties.getBatchSize());
+            totalCommits.get(), properties.getBatchSize());
         }
         mvStore.commit();
         totalCommits.incrementAndGet();
       } else {
         if (log.isDebugEnabled()) {
           log.debug("total={} commits={} batch={} message=enabled auto commit",
-              totalOperation.get(),
-              totalCommits.get(), properties.getBatchSize());
+            totalOperation.get(),
+            totalCommits.get(), properties.getBatchSize());
         }
       }
     }
