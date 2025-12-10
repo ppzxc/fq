@@ -21,4 +21,5 @@ jobs:
       - name: Publish package # Gradle의 'publish' 태스크를 실행합니다.
         run: gradle publish
         env:
+          GITHUB_USERNAME: ${{ secrets.USERNAME }} # 기본 토큰으로 인증합니다.
           GITHUB_TOKEN: ${{ secrets.TOKEN }} # 기본 토큰으로 인증합니다.
