@@ -41,7 +41,6 @@ class MVStoreFileQueueThroughputTest {
   void t1(int batchSize, int operations) {
     List<String> results = new ArrayList<>();
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-//    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(),
       mvStoreFileQueueProperties);
@@ -80,7 +79,6 @@ class MVStoreFileQueueThroughputTest {
     ReentrantLock lock = new ReentrantLock();
     List<String> results = new ArrayList<>();
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-//    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(),
       mvStoreFileQueueProperties);
@@ -156,7 +154,6 @@ class MVStoreFileQueueThroughputTest {
   })
   void t3(int payloadLength, int batchSize, int operations) {
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-//    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
     fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(),
       mvStoreFileQueueProperties);

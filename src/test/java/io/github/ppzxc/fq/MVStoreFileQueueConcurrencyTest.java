@@ -36,7 +36,6 @@ class MVStoreFileQueueConcurrencyTest {
   void setUp() {
     File tempFile = tempDir.resolve(FILE_NAME).toFile();
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-//    properties.setFileName(tempFile.getAbsolutePath());
     queue = new MVStoreFileQueue<>(properties, tempFile.getAbsolutePath());
   }
 

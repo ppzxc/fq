@@ -42,7 +42,6 @@ class MVStoreFileQueueFullTest {
   void setUp() {
     tempFile = tempDir.resolve(FILE_NAME).toFile();
     properties = new MVStoreFileQueueProperties();
-//    properties.setFileName(tempFile.getAbsolutePath());
     queue = new MVStoreFileQueue<>(properties, tempFile.getAbsolutePath());
   }
 
