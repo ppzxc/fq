@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.nio.file.Path;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -19,11 +18,12 @@ class MVStoreFileQueueUnitTest {
   void t0() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile().getAbsolutePath());
+    String absolutePath = tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile()
+      .getAbsolutePath();
     mvStoreFileQueueProperties.setAutoCommitDisabled(true);
 
     // when, then
-    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
+    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(absolutePath, mvStoreFileQueueProperties))
       .isNull();
   }
 
@@ -32,11 +32,12 @@ class MVStoreFileQueueUnitTest {
   void t1() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile().getAbsolutePath());
+    String absolutePath = tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile()
+      .getAbsolutePath();
     mvStoreFileQueueProperties.setMaxSize(0);
 
     // when
-    FileQueue<String> fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+    FileQueue<String> fileQueue = FileQueueFactory.createMVStoreFileQueue(absolutePath, mvStoreFileQueueProperties);
 
     // then
     assertThatCode(() -> fileQueue.enqueue("ITEM"))
@@ -52,13 +53,14 @@ class MVStoreFileQueueUnitTest {
   void t2() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile().getAbsolutePath());
+    String absolutePath = tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile()
+      .getAbsolutePath();
 
     // when
-    FileQueue<String> fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
-    Optional<String> actual = fileQueue.dequeue();
+    FileQueue<String> fileQueue = FileQueueFactory.createMVStoreFileQueue(absolutePath, mvStoreFileQueueProperties);
+    String actual = fileQueue.dequeue();
 
     // then
-    assertThat(actual).isEmpty();
+    assertThat(actual).isNull();
   }
 }

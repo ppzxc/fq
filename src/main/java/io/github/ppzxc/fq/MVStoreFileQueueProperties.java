@@ -8,7 +8,6 @@ import lombok.Setter;
 @Setter
 public class MVStoreFileQueueProperties {
 
-  private String fileName;
   private String queueName = "queue";
   private int batchSize = 1000;
   private long maxSize = Long.MAX_VALUE;
@@ -23,4 +22,7 @@ public class MVStoreFileQueueProperties {
   private int tryLockTimeout = 1;
   private TimeUnit tryLockTimeunit = TimeUnit.SECONDS;
   private int retryBackoffMs = 100;
+  private int maxCompactTime = 60 * 1000;
+  private long compactByFileSize = 50 * 1024 * 1024; // 50 MB
+
 }

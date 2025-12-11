@@ -1,18 +1,26 @@
 package io.github.ppzxc.fq;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface FileQueue<T> {
 
-  void enqueue(T value);
+  String fileName();
 
-  Optional<T> dequeue();
+  boolean enqueue(T value);
+
+  boolean enqueue(List<T> value);
+
+  T dequeue();
+
+  List<T> dequeue(int size);
 
   boolean isEmpty();
 
   long size();
 
-  void metric();
+  void metric(String name);
 
   void close();
+
+  void compactFile();
 }

@@ -1,6 +1,7 @@
 package io.github.ppzxc.fq;
 
 import java.io.Serializable;
+import java.nio.file.FileSystems;
 
 @SuppressWarnings("unused")
 public final class FileQueueFactory {
@@ -9,11 +10,20 @@ public final class FileQueueFactory {
   }
 
   public static <T extends Serializable> FileQueue<T> createMVStoreFileQueue(
+    MVStoreFileQueueProperties mvStoreFileQueueProperties, String fileName) {
+    return new MVStoreFileQueue<>(mvStoreFileQueueProperties,
+      String.join(FileSystems.getDefault().getSeparator(), System.getProperty("user.dir"), "sys", "que", fileName));
+  }
+
+  public static <T extends Serializable> FileQueue<T> createMVStoreFileQueue(String path,
     MVStoreFileQueueProperties mvStoreFileQueueProperties) {
-    return new MVStoreFileQueue<>(mvStoreFileQueueProperties);
+    if (path == null || path.trim().isEmpty()) {
+      throw new IllegalArgumentException("[FileQueueFactory] path cannot be null or empty");
+    }
+    return new MVStoreFileQueue<>(mvStoreFileQueueProperties, path);
   }
 
   public static <T extends Serializable> FileQueue<T> createMVStoreFileQueue() {
-    return createMVStoreFileQueue(new MVStoreFileQueueProperties());
+    return createMVStoreFileQueue(new MVStoreFileQueueProperties(), "local");
   }
 }

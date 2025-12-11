@@ -1,7 +1,15 @@
 package io.github.ppzxc.fq;
 
+import java.io.IOException;
 import java.io.Serializable;
-import java.util.Optional;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +20,8 @@ import org.h2.mvstore.MVStore.Builder;
 @Slf4j
 class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
+  private static final String[] UNITS = new String[]{"B", "kB", "MB", "GB", "TB", "PB", "EB"};
+  private final String fileName;
   private final MVStoreFileQueueProperties properties;
   private final ReentrantReadWriteLock lock;
   private final MVStore mvStore;
@@ -21,13 +31,21 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   private final AtomicLong totalOperation;
   private final AtomicLong totalCommits;
 
-  MVStoreFileQueue(MVStoreFileQueueProperties properties) {
-    this.properties = validation(properties);
+  MVStoreFileQueue(MVStoreFileQueueProperties properties, String fileName) {
+    this.fileName = fileName;
+    this.properties = properties;
     this.lock = new ReentrantReadWriteLock(properties.isFair());
+    if (properties.getQueueName() == null || properties.getQueueName().trim().isEmpty()) {
+      throw new IllegalArgumentException("[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty");
+    }
 
     try {
+      Path path = Paths.get(fileName);
+      if (Files.notExists(path)) {
+        Files.createDirectories(path.getParent());
+      }
       Builder builder = new Builder()
-        .fileName(properties.getFileName())
+        .fileName(fileName)
         .autoCompactFillRate(properties.getAutoCompactFillRate())
         .cacheSize(properties.getCacheSize()) // read
         .autoCommitBufferSize(properties.getAutoCommitBufferSize()) // write
@@ -52,44 +70,73 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         this.totalCommits.set(0);
         return null;
       });
+      log.info("head={} tail={} message=mvStore file queue initialized", head.get(), tail.get());
     } catch (Exception e) {
       throw new FileQueueException("[MVStoreFileQueue] Failed to initialize queue", e);
     }
   }
 
-  private MVStoreFileQueueProperties validation(MVStoreFileQueueProperties properties) {
-    if (properties.getFileName() == null || properties.getFileName().trim().isEmpty()) {
-      throw new IllegalArgumentException(
-        "[MVStoreFileQueue] MVStoreFileQueueProperties.fileName cannot be null or empty");
-    }
-    if (properties.getQueueName() == null || properties.getQueueName().trim().isEmpty()) {
-      throw new IllegalArgumentException(
-        "[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty");
-    }
-    return properties;
+  @Override
+  public String fileName() {
+    return fileName;
   }
 
   @Override
-  public void enqueue(T value) {
-    acquireWriteLock(() -> {
+  public boolean enqueue(T value) {
+    return acquireWriteLock(() -> {
       if (size() >= properties.getMaxSize()) {
         throw new FileQueueException("[MVStoreFileQueue] Queue is full: " + size() + " > " + properties.getMaxSize());
       }
-      queue.put(tail.getAndIncrement(), value);
-      commitIfNeeded();
-      return null;
+      try {
+        long key = tail.getAndIncrement();
+        if (queue.put(key, value) != null) {
+          log.warn("key={} value={} message=duplicate key", key, value);
+        }
+        return true;
+      } finally {
+        commitIfNeeded();
+      }
     });
   }
 
   @Override
-  public Optional<T> dequeue() {
+  public boolean enqueue(List<T> value) {
+    return acquireWriteLock(() -> {
+      if (size() + value.size() >= properties.getMaxSize()) {
+        throw new FileQueueException("Queue is full: " + size() + " > " + properties.getMaxSize());
+      }
+      value.forEach(v -> queue.put(tail.getAndIncrement(), v));
+      commitIfNeeded();
+      return true;
+    });
+  }
+
+  @Override
+  public T dequeue() {
     return acquireWriteLock(() -> {
       if (isEmpty()) {
-        return Optional.empty();
+        return null;
       }
-      T item = queue.remove(head.getAndIncrement());
+      try {
+        return queue.remove(head.getAndIncrement());
+      } finally {
+        commitIfNeeded();
+      }
+    });
+  }
+
+  @Override
+  public List<T> dequeue(int size) {
+    return acquireWriteLock(() -> {
+      List<T> dequeued = new ArrayList<>();
+      for (int i = 0; i < size; i++) {
+        if (isEmpty()) {
+          break;
+        }
+        dequeued.add(queue.remove(head.getAndIncrement()));
+      }
       commitIfNeeded();
-      return Optional.ofNullable(item);
+      return dequeued;
     });
   }
 
@@ -104,8 +151,8 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   }
 
   @Override
-  public void metric() {
-    log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", properties.getQueueName(),
+  public void metric(String name) {
+    log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", name,
       totalOperation.get(), totalCommits.get(), tail.get() - head.get(), head.get(), tail.get());
   }
 
@@ -117,6 +164,31 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       mvStore.close();
       return null;
     });
+  }
+
+  @Override
+  public void compactFile() {
+    acquireWriteLock(() -> {
+      long before = fileSize();
+      if (before > properties.getCompactByFileSize()) {
+        long started = System.nanoTime();
+        mvStore.compactFile(properties.getMaxCompactTime());
+        log.info("before.file.size={} after.file.size={} latency={} file.name={} message=compact mvStore file queue",
+          readableFileSize(before), readableFileSize(fileSize()), latency(started), fileName);
+      } else {
+        log.info("file.size={} compact.by={} file.name={} message=compact mvStore file queue", readableFileSize(before),
+          readableFileSize(properties.getCompactByFileSize()), fileName);
+      }
+      return null;
+    });
+  }
+
+  private String latency(long started) {
+    long nanos = System.nanoTime() - started;
+    TimeUnit unit = chooseUnit(nanos);
+    double value = (double)nanos / (double)TimeUnit.NANOSECONDS.convert(1L, unit);
+    String var10000 = String.format(Locale.ROOT, "%.4g", value);
+    return var10000 + " " + abbreviate(unit);
   }
 
   private <R> R acquireWriteLock(SupplierWithException<R, Exception> action) {
@@ -184,6 +256,60 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
       log.warn("Backoff sleep interrupted", ie);
+    }
+  }
+
+  private long fileSize() {
+    try {
+      return Files.size(Paths.get(fileName));
+    } catch (IOException e) {
+      log.error("message=get file size error", e);
+    }
+    return 0;
+  }
+
+  private String readableFileSize(long size) {
+    if (size <= 0) {
+      return "0";
+    }
+    int digitGroups = (int) (Math.log10((double) size) / Math.log10(1024));
+    return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups];
+  }
+
+  private TimeUnit chooseUnit(long nanos) {
+    if (TimeUnit.DAYS.convert(nanos, TimeUnit.NANOSECONDS) > 0L) {
+      return TimeUnit.DAYS;
+    } else if (TimeUnit.HOURS.convert(nanos, TimeUnit.NANOSECONDS) > 0L) {
+      return TimeUnit.HOURS;
+    } else if (TimeUnit.MINUTES.convert(nanos, TimeUnit.NANOSECONDS) > 0L) {
+      return TimeUnit.MINUTES;
+    } else if (TimeUnit.SECONDS.convert(nanos, TimeUnit.NANOSECONDS) > 0L) {
+      return TimeUnit.SECONDS;
+    } else if (TimeUnit.MILLISECONDS.convert(nanos, TimeUnit.NANOSECONDS) > 0L) {
+      return TimeUnit.MILLISECONDS;
+    } else {
+      return TimeUnit.MICROSECONDS.convert(nanos, TimeUnit.NANOSECONDS) > 0L ? TimeUnit.MICROSECONDS : TimeUnit.NANOSECONDS;
+    }
+  }
+
+  private String abbreviate(TimeUnit unit) {
+    switch (unit) {
+      case NANOSECONDS:
+        return "ns";
+      case MICROSECONDS:
+        return "μs";
+      case MILLISECONDS:
+        return "ms";
+      case SECONDS:
+        return "s";
+      case MINUTES:
+        return "min";
+      case HOURS:
+        return "h";
+      case DAYS:
+        return "d";
+      default:
+        throw new AssertionError();
     }
   }
 }

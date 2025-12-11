@@ -7,7 +7,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -37,8 +36,8 @@ class MVStoreFileQueueConcurrencyTest {
   void setUp() {
     File tempFile = tempDir.resolve(FILE_NAME).toFile();
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-    properties.setFileName(tempFile.getAbsolutePath());
-    queue = new MVStoreFileQueue<>(properties);
+//    properties.setFileName(tempFile.getAbsolutePath());
+    queue = new MVStoreFileQueue<>(properties, tempFile.getAbsolutePath());
   }
 
   @AfterEach
@@ -77,9 +76,9 @@ class MVStoreFileQueueConcurrencyTest {
         try {
           int localCount = 0;
           while (localCount < operationsPerThread) {
-            Optional<Integer> value = queue.dequeue();
-            if (value.isPresent()) {
-              dequeued.add(value.get());
+            Integer value = queue.dequeue();
+            if (value != null) {
+              dequeued.add(value);
               localCount++;
             } else {
               await().atMost(Duration.ofMillis(1));

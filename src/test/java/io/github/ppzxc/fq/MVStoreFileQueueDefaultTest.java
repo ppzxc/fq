@@ -31,9 +31,8 @@ class MVStoreFileQueueDefaultTest {
   void t0() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(100);
-    fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+    fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(), mvStoreFileQueueProperties);
     List<String> given = new ArrayList<>();
     for (int i = 0; i < 200; i++) {
       given.add(UUID.randomUUID().toString().replaceAll("-", ""));
@@ -43,7 +42,10 @@ class MVStoreFileQueueDefaultTest {
     given.forEach(fileQueue::enqueue);
     List<String> actual = new ArrayList<>();
     while (!fileQueue.isEmpty()) {
-      fileQueue.dequeue().ifPresent(actual::add);
+      String dequeue = fileQueue.dequeue();
+      if (dequeue != null) {
+        actual.add(dequeue);
+      }
     }
 
     // then
@@ -58,13 +60,12 @@ class MVStoreFileQueueDefaultTest {
   void t1() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(null);
 
     // when, then
-    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
+    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(null, mvStoreFileQueueProperties))
       .isInstanceOf(IllegalArgumentException.class)
       .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
-        "[MVStoreFileQueue] MVStoreFileQueueProperties.fileName cannot be null or empty"));
+        "[FileQueueFactory] path cannot be null or empty"));
   }
 
   @DisplayName("queueName cannot be null or empty")
@@ -72,11 +73,10 @@ class MVStoreFileQueueDefaultTest {
   void t2() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName("test_queue.db");
     mvStoreFileQueueProperties.setQueueName(null);
 
     // when, then
-    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties))
+    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties, "test_queue.db"))
       .isInstanceOf(IllegalArgumentException.class)
       .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
         "[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty"));

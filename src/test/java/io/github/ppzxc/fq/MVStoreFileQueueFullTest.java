@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,13 +36,14 @@ class MVStoreFileQueueFullTest {
   private MVStoreFileQueueProperties properties;
   @TempDir
   Path tempDir;
+  File tempFile;
 
   @BeforeEach
   void setUp() {
-    File tempFile = tempDir.resolve(FILE_NAME).toFile();
+    tempFile = tempDir.resolve(FILE_NAME).toFile();
     properties = new MVStoreFileQueueProperties();
-    properties.setFileName(tempFile.getAbsolutePath());
-    queue = new MVStoreFileQueue<>(properties);
+//    properties.setFileName(tempFile.getAbsolutePath());
+    queue = new MVStoreFileQueue<>(properties, tempFile.getAbsolutePath());
   }
 
   @AfterEach
@@ -60,8 +60,8 @@ class MVStoreFileQueueFullTest {
     queue.enqueue(2);
 
     assertThat(queue.size()).isEqualTo(2);
-    assertThat(queue.dequeue()).contains(1);
-    assertThat(queue.dequeue()).contains(2);
+    assertThat(queue.dequeue()).isEqualTo(1);
+    assertThat(queue.dequeue()).isEqualTo(2);
     assertThat(queue.isEmpty()).isTrue();
   }
 
@@ -71,7 +71,7 @@ class MVStoreFileQueueFullTest {
     for (int i = 0; i < properties.getBatchSize() * 2; i++) {
       queue.enqueue(i);
     }
-    queue.metric();
+    queue.metric("test");
     // no exception = success
     assertThat(queue.size()).isEqualTo(properties.getBatchSize() * 2L);
   }
@@ -85,11 +85,10 @@ class MVStoreFileQueueFullTest {
     queue.close();
 
     // reopen
-    queue = new MVStoreFileQueue<>(properties);
-    Optional<Integer> first = queue.dequeue();
+    queue = new MVStoreFileQueue<>(properties, tempFile.getAbsolutePath());
+    Integer first = queue.dequeue();
 
-    assertThat(first).isPresent();
-    assertThat(first.get()).isZero();
+    assertThat(first).isNotNull().isZero();
   }
 
   @Test
@@ -119,9 +118,9 @@ class MVStoreFileQueueFullTest {
         try {
           int localCount = 0;
           while (localCount < operationsPerThread) {
-            Optional<Integer> val = queue.dequeue();
-            if (val.isPresent()) {
-              dequeued.add(val.get());
+            Integer val = queue.dequeue();
+            if (val != null) {
+              dequeued.add(val);
               localCount++;
             } else {
               await().atMost(Duration.ofMillis(1));

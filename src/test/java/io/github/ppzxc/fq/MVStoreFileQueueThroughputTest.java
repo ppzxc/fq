@@ -6,7 +6,6 @@ import com.google.common.base.Stopwatch;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.AfterEach;
@@ -42,9 +41,10 @@ class MVStoreFileQueueThroughputTest {
   void t1(int batchSize, int operations) {
     List<String> results = new ArrayList<>();
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
+//    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
-    fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+    fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(),
+      mvStoreFileQueueProperties);
 
     Stopwatch enqueueStartTime = Stopwatch.createStarted();
     // enqueue
@@ -55,7 +55,10 @@ class MVStoreFileQueueThroughputTest {
     Stopwatch dequeueStartTime = Stopwatch.createStarted();
     // dequeue
     for (int i = 0; i < operations; i++) {
-      fileQueue.dequeue().ifPresent(results::add);
+      String dequeue = fileQueue.dequeue();
+      if (dequeue != null) {
+        results.add(dequeue);
+      }
     }
     Stopwatch dequeueEndTime = dequeueStartTime.stop();
 
@@ -63,7 +66,7 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("enqueue=%s%n", enqueueEndTime);
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
-    fileQueue.metric();
+    fileQueue.metric("TEST");
     assertThat(results).hasSize(operations);
   }
 
@@ -77,9 +80,10 @@ class MVStoreFileQueueThroughputTest {
     ReentrantLock lock = new ReentrantLock();
     List<String> results = new ArrayList<>();
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
+//    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
-    fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+    fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(),
+      mvStoreFileQueueProperties);
 
     // enqueue
     Stopwatch enqueueStartTime = Stopwatch.createStarted();
@@ -108,11 +112,11 @@ class MVStoreFileQueueThroughputTest {
       dequeueThreads[i] = new Thread(() -> {
         for (int j = 0; j < operations; j++) {
           try {
-            Optional<String> item = fileQueue.dequeue();
-            if (item.isPresent()) {
+            String item = fileQueue.dequeue();
+            if (item != null) {
               lock.lock();
               try {
-                results.add(item.get());
+                results.add(item);
               } finally {
                 lock.unlock();
               }
@@ -133,7 +137,7 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("enqueue=%s%n", enqueueEndTime);
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
-    fileQueue.metric();
+    fileQueue.metric("TEST");
     assertThat(results).hasSize(operations * threads);
   }
 
@@ -152,9 +156,10 @@ class MVStoreFileQueueThroughputTest {
   })
   void t3(int payloadLength, int batchSize, int operations) {
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
+//    mvStoreFileQueueProperties.setFileName(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath());
     mvStoreFileQueueProperties.setBatchSize(batchSize);
-    fileQueue = FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties);
+    fileQueue = FileQueueFactory.createMVStoreFileQueue(tempDir.resolve(FILE_NAME).toFile().getAbsolutePath(),
+      mvStoreFileQueueProperties);
 
     Stopwatch enqueueStartTime = Stopwatch.createStarted();
     // enqueue
@@ -173,7 +178,7 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("enqueue=%s%n", enqueueEndTime);
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
-    fileQueue.metric();
+    fileQueue.metric("TEST");
     fileQueue.close();
     assertThat(fileQueue.isEmpty()).isTrue();
   }
