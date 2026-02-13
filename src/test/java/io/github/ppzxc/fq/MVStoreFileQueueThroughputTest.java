@@ -3,7 +3,11 @@ package io.github.ppzxc.fq;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.base.Stopwatch;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -23,10 +27,11 @@ class MVStoreFileQueueThroughputTest {
   Path tempDir;
 
   @AfterEach
-  void tearDown() {
+  void tearDown() throws IOException {
     if (fileQueue != null) {
       fileQueue.close();
     }
+    Files.deleteIfExists(Paths.get(String.join(FileSystems.getDefault().getSeparator(), System.getProperty("user.dir"), "sys", "que", "test_queue.db")));
   }
 
   @Timeout(1000 * 60 * 5)
@@ -176,8 +181,8 @@ class MVStoreFileQueueThroughputTest {
     System.out.printf("dequeue=%s%n", dequeueEndTime);
     System.out.println("----------------------------");
     fileQueue.metric("TEST");
-    fileQueue.close();
     assertThat(fileQueue.isEmpty()).isTrue();
+    fileQueue.close();
   }
 
   private String getAlphabet(int targetStringLength) {

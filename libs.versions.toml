@@ -7,6 +7,7 @@ org-projectlombok = "1.18.42"
 org-slf4j-api = "1.7.36"
 net-thebugmc-gradle-sonatype-central-portal-publisher = "1.2.2"
 org-awaitility = "4.3.0"
+me-champeau-jmh = "0.7.3"
 
 [libraries]
 com-h2database-mvstore = { group = "com.h2database", name = "h2-mvstore", version.ref = "com-h2database-mvstore" }
@@ -21,3 +22,4 @@ org-awaitility = { group = "org.awaitility", name = "awaitility", version.ref = 
 
 [plugins]
 net-thebugmc-gradle-sonatype-central-portal-publisher = { id = "net.thebugmc.gradle.sonatype-central-portal-publisher", version.ref = "net-thebugmc-gradle-sonatype-central-portal-publisher" }
+me-champeau-jmh = { id = "me.champeau.jmh", version.ref = "me-champeau-jmh" }

@@ -30,6 +30,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   private final AtomicLong tail;
   private final AtomicLong totalOperation;
   private final AtomicLong totalCommits;
+  private volatile boolean closed = false;
 
   MVStoreFileQueue(MVStoreFileQueueProperties properties, String fileName) {
     this.fileName = fileName;
@@ -83,6 +84,10 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public boolean enqueue(T value) {
+    checkClosed();
+    if (value == null) {
+      throw new IllegalArgumentException("[MVStoreFileQueue] value cannot be null");
+    }
     return acquireWriteLock(() -> {
       if (size() >= properties.getMaxSize()) {
         throw new FileQueueException("[MVStoreFileQueue] Queue is full: " + size() + " > " + properties.getMaxSize());
@@ -101,6 +106,19 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public boolean enqueue(List<T> value) {
+    checkClosed();
+    if (value == null) {
+      throw new IllegalArgumentException("[MVStoreFileQueue] value list cannot be null");
+    }
+    if (value.isEmpty()) {
+      return true;
+    }
+    // Validate all elements before acquiring lock
+    for (T v : value) {
+      if (v == null) {
+        throw new IllegalArgumentException("[MVStoreFileQueue] value in list cannot be null");
+      }
+    }
     return acquireWriteLock(() -> {
       if (size() + value.size() >= properties.getMaxSize()) {
         throw new FileQueueException("Queue is full: " + size() + " > " + properties.getMaxSize());
@@ -113,6 +131,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public T dequeue() {
+    checkClosed();
     return acquireWriteLock(() -> {
       if (isEmpty()) {
         return null;
@@ -127,6 +146,13 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public List<T> dequeue(int size) {
+    checkClosed();
+    if (size < 0) {
+      throw new IllegalArgumentException("[MVStoreFileQueue] size cannot be negative");
+    }
+    if (size == 0) {
+      return new ArrayList<>();
+    }
     return acquireWriteLock(() -> {
       List<T> dequeued = new ArrayList<>();
       for (int i = 0; i < size; i++) {
@@ -142,11 +168,13 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public boolean isEmpty() {
+    checkClosed();
     return acquireReadLock(() -> head.get() == tail.get());
   }
 
   @Override
   public long size() {
+    checkClosed();
     return acquireReadLock(() -> tail.get() - head.get());
   }
 
@@ -158,7 +186,14 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public void close() {
+    if (closed) {
+      return;
+    }
     acquireWriteLock(() -> {
+      if (closed) {
+        return null;
+      }
+      closed = true;
       long newVersion = mvStore.commit();
       log.info("newVersion={} message=close", newVersion);
       mvStore.close();
@@ -166,8 +201,15 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     });
   }
 
+  private void checkClosed() {
+    if (closed) {
+      throw new IllegalStateException("[MVStoreFileQueue] Queue is already closed");
+    }
+  }
+
   @Override
   public void compactFile() {
+    checkClosed();
     acquireWriteLock(() -> {
       long before = fileSize();
       if (before > properties.getCompactByFileSize()) {
@@ -210,19 +252,21 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   }
 
   private <R> R acquireReadLock(SupplierWithException<R, Exception> action) {
+    Exception exception = null;
     for (int attempt = 0; attempt < properties.getMaxRetry(); attempt++) {
       lock.readLock().lock();
       try {
         return action.get();
       } catch (Exception e) {
         log.info("Failed to acquire read lock: retry {}", attempt, e);
+        exception = e;
         sleepBackoff();
       } finally {
         lock.readLock().unlock();
       }
     }
     throw new FileQueueException(
-      "[MVStoreFileQueue] Failed to acquire read lock after " + properties.getMaxRetry() + " attempts");
+      "[MVStoreFileQueue] Failed to acquire read lock after " + properties.getMaxRetry() + " attempts", exception);
   }
 
   private void commitIfNeeded() {

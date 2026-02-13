@@ -3,6 +3,7 @@ plugins {
     signing
     jacoco
     alias(libs.plugins.net.thebugmc.gradle.sonatype.central.portal.publisher)
+    alias(libs.plugins.me.champeau.jmh)
 }
 
 group = providers.gradleProperty("GROUP_NAME").get()
@@ -28,6 +29,30 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required = true
+        csv.required = true
+        html.required = true
+    }
+    finalizedBy(tasks.jacocoTestCoverageVerification)
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            element = "CLASS"
+
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = BigDecimal.valueOf(0.90)
+            }
+        }
+    }
 }
 
 java {
@@ -84,4 +109,14 @@ centralPortal {
             developerConnection = providers.gradleProperty("POM_SCM_DEV_CONNECTION").get()
         }
     }
+}
+
+jmh {
+    warmupIterations = 3
+    iterations = 5
+    fork = 1
+    benchmarkMode = listOf("thrpt")
+    timeUnit = "s"
+    // 벤치마크 결과 리포트 형식
+    resultFormat = "JSON"
 }

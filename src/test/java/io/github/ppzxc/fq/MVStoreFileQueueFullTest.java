@@ -85,9 +85,13 @@ class MVStoreFileQueueFullTest {
 
     // reopen
     queue = new MVStoreFileQueue<>(properties, tempFile.getAbsolutePath());
-    Integer first = queue.dequeue();
-
-    assertThat(first).isNotNull().isZero();
+    try {
+      Integer first = queue.dequeue();
+      assertThat(first).isNotNull().isZero();
+      assertThat(queue.size()).isEqualTo(9);
+    } finally {
+      // queue will be closed in tearDown
+    }
   }
 
   @Test
@@ -106,6 +110,8 @@ class MVStoreFileQueueFullTest {
           for (int j = 0; j < operationsPerThread; j++) {
             queue.enqueue(counter.incrementAndGet());
           }
+        } catch (Exception e) {
+          e.printStackTrace();
         } finally {
           latch.countDown();
         }
@@ -122,9 +128,11 @@ class MVStoreFileQueueFullTest {
               dequeued.add(val);
               localCount++;
             } else {
-              await().atMost(Duration.ofMillis(1));
+              Thread.sleep(1);
             }
           }
+        } catch (Exception e) {
+          e.printStackTrace();
         } finally {
           latch.countDown();
         }

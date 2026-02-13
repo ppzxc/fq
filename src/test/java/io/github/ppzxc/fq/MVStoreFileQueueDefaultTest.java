@@ -73,12 +73,11 @@ class MVStoreFileQueueDefaultTest {
   void t2() {
     // given
     MVStoreFileQueueProperties mvStoreFileQueueProperties = new MVStoreFileQueueProperties();
-    mvStoreFileQueueProperties.setQueueName(null);
 
-    // when, then
-    assertThatCode(() -> FileQueueFactory.createMVStoreFileQueue(mvStoreFileQueueProperties, "test_queue.db"))
+    // when, then - setter should throw exception
+    assertThatCode(() -> mvStoreFileQueueProperties.setQueueName(null))
       .isInstanceOf(IllegalArgumentException.class)
       .isInstanceOfSatisfying(IllegalArgumentException.class, exception -> assertThat(exception.getMessage()).isEqualTo(
-        "[MVStoreFileQueue] MVStoreFileQueueProperties.queueName cannot be null or empty"));
+        "queueName cannot be null or empty"));
   }
 }
