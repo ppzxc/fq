@@ -11,6 +11,9 @@ public final class FileQueueFactory {
 
   public static <T extends Serializable> FileQueue<T> createMVStoreFileQueue(
     MVStoreFileQueueProperties mvStoreFileQueueProperties, String fileName) {
+    if (fileName == null || fileName.trim().isEmpty()) {
+      throw new IllegalArgumentException("[FileQueueFactory] fileName cannot be null or empty");
+    }
     return new MVStoreFileQueue<>(mvStoreFileQueueProperties,
       String.join(FileSystems.getDefault().getSeparator(), System.getProperty("user.dir"), "sys", "que", fileName));
   }
