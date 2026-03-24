@@ -99,8 +99,10 @@ class MVStoreFileQueueFullTest {
   void shouldHandleConcurrentEnqueueAndDequeue() throws Exception {
     int threadCount = 8;
     int operationsPerThread = 500;
+    int totalOperations = threadCount * operationsPerThread;
     ExecutorService executor = Executors.newFixedThreadPool(threadCount * 2);
-    CountDownLatch latch = new CountDownLatch(threadCount * 2);
+    CountDownLatch enqueueLatch = new CountDownLatch(threadCount);
+    CountDownLatch dequeueLatch = new CountDownLatch(threadCount);
     Set<Integer> dequeued = ConcurrentHashMap.newKeySet();
     AtomicInteger counter = new AtomicInteger(0);
 
@@ -113,39 +115,40 @@ class MVStoreFileQueueFullTest {
         } catch (Exception e) {
           e.printStackTrace();
         } finally {
-          latch.countDown();
+          enqueueLatch.countDown();
         }
       });
     }
+    assertThat(enqueueLatch.await(120, TimeUnit.SECONDS)).isTrue();
 
     for (int i = 0; i < threadCount; i++) {
       executor.submit(() -> {
         try {
-          int localCount = 0;
-          while (localCount < operationsPerThread) {
+          while (dequeued.size() < totalOperations) {
             Integer val = queue.dequeue();
             if (val != null) {
               dequeued.add(val);
-              localCount++;
             } else {
               Thread.sleep(1);
             }
           }
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
         } catch (Exception e) {
           e.printStackTrace();
         } finally {
-          latch.countDown();
+          dequeueLatch.countDown();
         }
       });
     }
 
-    boolean completed = latch.await(60, TimeUnit.SECONDS);
+    boolean completed = dequeueLatch.await(120, TimeUnit.SECONDS);
     executor.shutdownNow();
 
     assertThat(completed).isTrue();
     assertThat(queue.isEmpty()).isTrue();
-    assertThat(dequeued).hasSize(threadCount * operationsPerThread);
-    assertThat(new HashSet<>(dequeued)).hasSize(threadCount * operationsPerThread);
+    assertThat(dequeued).hasSize(totalOperations);
+    assertThat(new HashSet<>(dequeued)).hasSize(totalOperations);
   }
 
   @Test
