@@ -127,6 +127,70 @@ class FileQueueFactoryTest {
       .hasMessage("[FileQueueFactory] path cannot be null or empty");
   }
 
+  @DisplayName("createMVStoreFileQueue with fileName - path traversal sequence rejected")
+  @Test
+  void createWithFileName_pathTraversal_rejected() {
+    // given
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+
+    // when, then — ".." should be rejected
+    assertThatThrownBy(() -> FileQueueFactory.createMVStoreFileQueue(properties, "../../etc/passwd"))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessageContaining("fileName must not contain path separators or traversal sequences");
+  }
+
+  @DisplayName("createMVStoreFileQueue with fileName - forward slash rejected")
+  @Test
+  void createWithFileName_forwardSlash_rejected() {
+    // given
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+
+    // when, then
+    assertThatThrownBy(() -> FileQueueFactory.createMVStoreFileQueue(properties, "subdir/queue"))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessageContaining("fileName must not contain path separators or traversal sequences");
+  }
+
+  @DisplayName("createMVStoreFileQueue with fileName - backslash rejected")
+  @Test
+  void createWithFileName_backslash_rejected() {
+    // given
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+
+    // when, then — backslash without forward slash (covers second || branch)
+    assertThatThrownBy(() -> FileQueueFactory.createMVStoreFileQueue(properties, "sub\\queue"))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessageContaining("fileName must not contain path separators or traversal sequences");
+  }
+
+  @DisplayName("createMVStoreFileQueue with fileName - dotdot only rejected")
+  @Test
+  void createWithFileName_dotdot_rejected() {
+    // given
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+
+    // when, then — dotdot without slashes (covers third || branch)
+    assertThatThrownBy(() -> FileQueueFactory.createMVStoreFileQueue(properties, "my..file"))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessageContaining("fileName must not contain path separators or traversal sequences");
+  }
+
+  @DisplayName("createMVStoreFileQueue with path - normalizes dotdot segments")
+  @Test
+  void createWithPath_normalizesDotDot() {
+    // given
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+    String path = tempDir.resolve("sub/../queue.db").toFile().getAbsolutePath();
+    String normalized = tempDir.resolve("queue.db").toFile().getAbsolutePath();
+
+    // when
+    FileQueue<String> queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
+
+    // then — path should be normalized
+    assertThat(queue.fileName()).isEqualTo(normalized);
+    queue.close();
+  }
+
   @DisplayName("createMVStoreFileQueue with default - success")
   @Test
   void createDefault_success() throws IOException {

@@ -50,8 +50,7 @@ class MVStoreFileQueueEdgeCaseTest {
 
     // when, then
     assertThatThrownBy(() -> FileQueueFactory.createMVStoreFileQueue(invalidPath, properties))
-        .isInstanceOf(FileQueueException.class)
-        .hasMessageContaining("[MVStoreFileQueue] Failed to initialize queue");
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @DisplayName("enqueue - duplicate key warning")
