@@ -1,11 +1,8 @@
 package io.github.ppzxc.fq;
 
-import java.util.concurrent.TimeUnit;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
 public class MVStoreFileQueueProperties {
 
   private String queueName = "queue";
@@ -16,11 +13,8 @@ public class MVStoreFileQueueProperties {
   private boolean autoCommitDisabled = false;
   private int autoCommitBufferSize = 1024;
   private int maxRetry = 3;
-  private long retryDelay = 100;
   private int cacheSize = 1; // 1MB
   private boolean fair = true;
-  private int tryLockTimeout = 1;
-  private TimeUnit tryLockTimeunit = TimeUnit.SECONDS;
   private int retryBackoffMs = 100;
   private int maxCompactTime = 60 * 1000;
   private long compactByFileSize = 50 * 1024 * 1024; // 50 MB
@@ -75,13 +69,6 @@ public class MVStoreFileQueueProperties {
     this.maxRetry = maxRetry;
   }
 
-  public void setRetryDelay(long retryDelay) {
-    if (retryDelay < 0) {
-      throw new IllegalArgumentException("retryDelay cannot be negative");
-    }
-    this.retryDelay = retryDelay;
-  }
-
   public void setCacheSize(int cacheSize) {
     if (cacheSize <= 0) {
       throw new IllegalArgumentException("cacheSize must be positive");
@@ -91,20 +78,6 @@ public class MVStoreFileQueueProperties {
 
   public void setFair(boolean fair) {
     this.fair = fair;
-  }
-
-  public void setTryLockTimeout(int tryLockTimeout) {
-    if (tryLockTimeout < 0) {
-      throw new IllegalArgumentException("tryLockTimeout cannot be negative");
-    }
-    this.tryLockTimeout = tryLockTimeout;
-  }
-
-  public void setTryLockTimeunit(TimeUnit tryLockTimeunit) {
-    if (tryLockTimeunit == null) {
-      throw new IllegalArgumentException("tryLockTimeunit cannot be null");
-    }
-    this.tryLockTimeunit = tryLockTimeunit;
   }
 
   public void setRetryBackoffMs(int retryBackoffMs) {
