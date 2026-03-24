@@ -132,6 +132,8 @@ class MVStoreFileQueueFullTest {
               Thread.sleep(1);
             }
           }
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
         } catch (Exception e) {
           e.printStackTrace();
         } finally {
