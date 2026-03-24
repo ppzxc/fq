@@ -64,7 +64,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       this.totalOperation = new AtomicLong();
       this.totalCommits = new AtomicLong();
 
-      acquireWriteLock(() -> {
+      executeWithWriteLock(() -> {
         this.head.set(queue.firstKey() != null ? queue.firstKey() : 0);
         this.tail.set(queue.lastKey() != null ? queue.lastKey() + 1 : 0);
         this.totalOperation.set(0);
@@ -88,7 +88,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     if (value == null) {
       throw new IllegalArgumentException("[MVStoreFileQueue] value cannot be null");
     }
-    return acquireWriteLock(() -> {
+    return executeWithWriteLock(() -> {
       if (size() >= properties.getMaxSize()) {
         throw new FileQueueException("[MVStoreFileQueue] Queue is full: " + size() + " > " + properties.getMaxSize());
       }
@@ -119,7 +119,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         throw new IllegalArgumentException("[MVStoreFileQueue] value in list cannot be null");
       }
     }
-    return acquireWriteLock(() -> {
+    return executeWithWriteLock(() -> {
       if (size() + value.size() >= properties.getMaxSize()) {
         throw new FileQueueException("Queue is full: " + size() + " > " + properties.getMaxSize());
       }
@@ -132,7 +132,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   @Override
   public T dequeue() {
     checkClosed();
-    return acquireWriteLock(() -> {
+    return executeWithWriteLock(() -> {
       if (isEmpty()) {
         return null;
       }
@@ -153,7 +153,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     if (size == 0) {
       return new ArrayList<>();
     }
-    return acquireWriteLock(() -> {
+    return executeWithWriteLock(() -> {
       List<T> dequeued = new ArrayList<>();
       for (int i = 0; i < size; i++) {
         if (isEmpty()) {
@@ -169,13 +169,13 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   @Override
   public boolean isEmpty() {
     checkClosed();
-    return acquireReadLock(() -> head.get() == tail.get());
+    return executeWithReadLock(() -> head.get() == tail.get());
   }
 
   @Override
   public long size() {
     checkClosed();
-    return acquireReadLock(() -> tail.get() - head.get());
+    return executeWithReadLock(() -> tail.get() - head.get());
   }
 
   @Override
@@ -189,7 +189,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     if (closed) {
       return;
     }
-    acquireWriteLock(() -> {
+    executeWithWriteLock(() -> {
       if (closed) {
         return null;
       }
@@ -210,7 +210,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   @Override
   public void compactFile() {
     checkClosed();
-    acquireWriteLock(() -> {
+    executeWithWriteLock(() -> {
       long before = fileSize();
       if (before > properties.getCompactByFileSize()) {
         long started = System.nanoTime();
@@ -233,14 +233,14 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     return var10000 + " " + abbreviate(unit);
   }
 
-  private <R> R acquireWriteLock(SupplierWithException<R, Exception> action) {
+  private <R> R executeWithWriteLock(SupplierWithException<R, Exception> action) {
     Exception exception = null;
     for (int attempt = 0; attempt < properties.getMaxRetry(); attempt++) {
       lock.writeLock().lock();
       try {
         return action.get();
       } catch (Exception e) {
-        log.info("[MVStoreFileQueue] Failed to acquire write lock: retry {}", attempt, e);
+        log.info("[MVStoreFileQueue] Failed to execute with write lock: retry {}", attempt, e);
         exception = e;
         sleepBackoff();
       } finally {
@@ -248,17 +248,17 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       }
     }
     throw new FileQueueException(
-      "[MVStoreFileQueue] Failed to acquire write lock after " + properties.getMaxRetry() + " attempts", exception);
+      "[MVStoreFileQueue] Failed to execute with write lock after " + properties.getMaxRetry() + " attempts", exception);
   }
 
-  private <R> R acquireReadLock(SupplierWithException<R, Exception> action) {
+  private <R> R executeWithReadLock(SupplierWithException<R, Exception> action) {
     Exception exception = null;
     for (int attempt = 0; attempt < properties.getMaxRetry(); attempt++) {
       lock.readLock().lock();
       try {
         return action.get();
       } catch (Exception e) {
-        log.info("Failed to acquire read lock: retry {}", attempt, e);
+        log.info("[MVStoreFileQueue] Failed to execute with read lock: retry {}", attempt, e);
         exception = e;
         sleepBackoff();
       } finally {
@@ -266,7 +266,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       }
     }
     throw new FileQueueException(
-      "[MVStoreFileQueue] Failed to acquire read lock after " + properties.getMaxRetry() + " attempts", exception);
+      "[MVStoreFileQueue] Failed to execute with read lock after " + properties.getMaxRetry() + " attempts", exception);
   }
 
   private void commitIfNeeded() {
