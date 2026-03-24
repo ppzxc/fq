@@ -272,12 +272,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   private void commitIfNeeded() {
     if (totalOperation.incrementAndGet() % properties.getBatchSize() == 0) {
       if (properties.isAutoCommitDisabled()) {
-        if (log.isDebugEnabled()) {
-          log.debug("total={} commits={} batch={} message=commit", totalOperation.get(),
-            totalCommits.get(), properties.getBatchSize());
-        }
-        mvStore.commit();
-        totalCommits.incrementAndGet();
+        doCommit();
       } else {
         if (log.isDebugEnabled()) {
           log.debug("total={} commits={} batch={} message=enabled auto commit",
@@ -286,6 +281,15 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         }
       }
     }
+  }
+
+  private void doCommit() {
+    if (log.isDebugEnabled()) {
+      log.debug("total={} commits={} batch={} message=commit", totalOperation.get(),
+        totalCommits.get(), properties.getBatchSize());
+    }
+    mvStore.commit();
+    totalCommits.incrementAndGet();
   }
 
   @FunctionalInterface
