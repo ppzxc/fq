@@ -288,12 +288,17 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
   }
 
   private void doCommit() {
-    if (log.isDebugEnabled()) {
-      log.debug("total={} commits={} batch={} message=commit", totalOperation.get(),
-        totalCommits.get(), properties.getBatchSize());
+    try {
+      if (log.isDebugEnabled()) {
+        log.debug("total={} commits={} batch={} message=commit", totalOperation.get(),
+          totalCommits.get(), properties.getBatchSize());
+      }
+      mvStore.commit();
+      totalCommits.incrementAndGet();
+    } catch (Exception e) {
+      log.error("total={} commits={} batch={} message=commit failed",
+        totalOperation.get(), totalCommits.get(), properties.getBatchSize(), e);
     }
-    mvStore.commit();
-    totalCommits.incrementAndGet();
   }
 
   @FunctionalInterface

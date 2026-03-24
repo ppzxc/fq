@@ -324,32 +324,30 @@ class MVStoreFileQueueCoverageTest {
   }
 
   /**
-   * autoCommitDisabled=true이고 batchSize=1일 때 MVStore가 강제로 닫힌 상태에서
-   * enqueue를 시도하면 예외가 발생하는지 검증한다.
-   * <p>내부 commitIfNeeded() 호출 시 MVStore가 닫혀 있으면 예외가 발생해야 한다.</p>
+   * autoCommitDisabled=true이고 batchSize=1일 때 enqueue마다 doCommit()이 호출되어
+   * commit이 정상적으로 수행되는지 검증한다.
+   * <p>
+   * batchSize=1로 설정하면 매 enqueue마다 commit이 발생한다.
+   * close() 후 재오픈 시 데이터가 영속화되었는지 확인한다.
+   * </p>
    */
   @Test
-  void testCommitIfNeededException() throws Exception {
+  void testCommitIfNeededException() {
+    String dbPath = tempDir.resolve("commit-test.db").toString();
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
     properties.setAutoCommitDisabled(true);
     properties.setBatchSize(1);
 
-    MVStoreFileQueue<String> mockQueue = new MVStoreFileQueue<>(properties, tempDir.resolve("mock-commit.db").toString());
+    MVStoreFileQueue<String> commitQueue = new MVStoreFileQueue<>(properties, dbPath);
+    assertThat(commitQueue.enqueue("committed-item")).isTrue();
+    assertThat(commitQueue.size()).isEqualTo(1);
+    commitQueue.close();
 
-    org.h2.mvstore.MVStore mvStore = (org.h2.mvstore.MVStore)
-        org.junit.platform.commons.util.ReflectionUtils.tryToReadFieldValue(MVStoreFileQueue.class, "mvStore", mockQueue).get();
-
-    mvStore.close(); // Force commit to fail because it's closed
-
-    // We can't easily make commit() throw an exception that is not caught or handled,
-    // but we can try to trigger the paths.
-    // In current implementation, mvStore.commit() is called.
-
-    try {
-        mockQueue.enqueue("test");
-    } catch (Exception e) {
-        // Expected
-    }
+    // doCommit()이 정상 동작했다면 재오픈 시 데이터가 있어야 한다
+    MVStoreFileQueue<String> reopened = new MVStoreFileQueue<>(properties, dbPath);
+    assertThat(reopened.size()).isEqualTo(1);
+    assertThat(reopened.dequeue()).isEqualTo("committed-item");
+    reopened.close();
   }
 
   /**
