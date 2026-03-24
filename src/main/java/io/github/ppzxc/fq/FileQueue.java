@@ -10,7 +10,7 @@ import java.util.List;
  *
  * @param <T> the type of elements held in this queue; must be serializable
  */
-public interface FileQueue<T> {
+public interface FileQueue<T> extends AutoCloseable {
 
   /**
    * Returns the absolute file path used for persistent storage.
