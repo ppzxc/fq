@@ -238,6 +238,9 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     for (int attempt = 0; attempt < properties.getMaxRetry(); attempt++) {
       lock.writeLock().lock();
       try {
+        if (closed) {
+          throw new IllegalStateException("[MVStoreFileQueue] Queue is already closed");
+        }
         return action.get();
       } catch (FileQueueException | IllegalArgumentException | IllegalStateException e) {
         throw e;
@@ -258,6 +261,9 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     for (int attempt = 0; attempt < properties.getMaxRetry(); attempt++) {
       lock.readLock().lock();
       try {
+        if (closed) {
+          throw new IllegalStateException("[MVStoreFileQueue] Queue is already closed");
+        }
         return action.get();
       } catch (FileQueueException | IllegalArgumentException | IllegalStateException e) {
         throw e;
