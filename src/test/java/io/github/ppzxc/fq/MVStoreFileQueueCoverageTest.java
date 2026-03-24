@@ -77,6 +77,7 @@ class MVStoreFileQueueCoverageTest {
         // Expected
     } finally {
         lock.writeLock().unlock();
+        interruptor.join(); // Wait for interruptor to deliver interrupt before clearing
         Thread.interrupted(); // Clear interrupted status
     }
 
