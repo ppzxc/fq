@@ -239,6 +239,8 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       lock.writeLock().lock();
       try {
         return action.get();
+      } catch (FileQueueException | IllegalArgumentException | IllegalStateException e) {
+        throw e;
       } catch (Exception e) {
         log.info("[MVStoreFileQueue] Failed to execute with write lock: retry {}", attempt, e);
         exception = e;
@@ -257,6 +259,8 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       lock.readLock().lock();
       try {
         return action.get();
+      } catch (FileQueueException | IllegalArgumentException | IllegalStateException e) {
+        throw e;
       } catch (Exception e) {
         log.info("[MVStoreFileQueue] Failed to execute with read lock: retry {}", attempt, e);
         exception = e;

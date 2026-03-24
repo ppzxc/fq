@@ -172,7 +172,6 @@ class MVStoreFileQueueCoverageTest {
 
     assertThatThrownBy(() -> smallQueue.enqueue("three"))
       .isInstanceOf(FileQueueException.class)
-      .cause()
       .hasMessageContaining("size 2 >= maxSize 2");
 
     smallQueue.close();
@@ -192,7 +191,6 @@ class MVStoreFileQueueCoverageTest {
     List<String> list = Arrays.asList("two", "three");
     assertThatThrownBy(() -> smallQueue.enqueue(list))
       .isInstanceOf(FileQueueException.class)
-      .cause()
       .hasMessageContaining("size 1 >= maxSize 2");
 
     smallQueue.close();
@@ -283,6 +281,33 @@ class MVStoreFileQueueCoverageTest {
     compactQueue.enqueue("test");
     assertThatCode(() -> compactQueue.compactFile()).doesNotThrowAnyException();
     compactQueue.close();
+  }
+
+  /**
+   * 큐가 가득 찬 상태에서 enqueue 시 재시도 없이 즉시 FileQueueException이 발생하는지 검증한다.
+   * <p>
+   * FileQueueException은 비즈니스 로직 예외이므로 재시도 대상이 아니다.
+   * retryBackoffMs=1000ms 설정에서 500ms 이내 실패해야 한다.
+   * </p>
+   */
+  @Test
+  void testEnqueueFullQueue_noRetry() {
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+    properties.setMaxSize(1);
+    properties.setMaxRetry(3);
+    properties.setRetryBackoffMs(1000);
+    MVStoreFileQueue<String> fullQueue = new MVStoreFileQueue<>(properties, tempDir.resolve("no-retry.db").toString());
+
+    fullQueue.enqueue("first");
+
+    long start = System.nanoTime();
+    assertThatThrownBy(() -> fullQueue.enqueue("second"))
+      .isInstanceOf(FileQueueException.class)
+      .hasMessageContaining("Queue is full");
+    long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+    assertThat(elapsedMs).isLessThan(500);
+    fullQueue.close();
   }
 
   /**

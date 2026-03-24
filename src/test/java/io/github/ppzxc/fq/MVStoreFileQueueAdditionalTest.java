@@ -202,7 +202,7 @@ class MVStoreFileQueueAdditionalTest {
     // Note: acquireWriteLock wraps the original exception, so we check the root cause
     assertThatThrownBy(() -> queue.enqueue("item-10"))
         .isInstanceOf(FileQueueException.class)
-        .hasRootCauseMessage("[MVStoreFileQueue] Queue is full: size 10 >= maxSize 10");
+        .hasMessage("[MVStoreFileQueue] Queue is full: size 10 >= maxSize 10");
   }
 
   /**
@@ -259,10 +259,10 @@ class MVStoreFileQueueAdditionalTest {
     List<String> batch = Arrays.asList("batch-0", "batch-1", "batch-2", "batch-3", "batch-4");
 
     // then - should fail because size(5) + batch.size(5) = 10 >= maxSize(10)
-    // Note: acquireWriteLock wraps the original exception
+    // FileQueueException is propagated immediately (no retry wrapper)
     assertThatThrownBy(() -> queue.enqueue(batch))
         .isInstanceOf(FileQueueException.class)
-        .hasRootCauseInstanceOf(FileQueueException.class);
+        .hasMessageContaining("Queue is full");
 
     // Verify a smaller batch succeeds
     List<String> smallBatch = Arrays.asList("small-0", "small-1", "small-2", "small-3");

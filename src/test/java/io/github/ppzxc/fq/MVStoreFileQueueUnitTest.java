@@ -34,8 +34,8 @@ class MVStoreFileQueueUnitTest {
   /**
    * maxSize=0 설정된 큐에 아이템을 삽입하면 FileQueueException이 발생하는지 검증한다.
    * <p>
-   * 예외는 "[MVStoreFileQueue] Failed to acquire write lock after 3 attempts" 메시지를 가지며,
-   * 원인(cause)은 "[MVStoreFileQueue] Queue is full: 0 > 0" 메시지를 가져야 한다.
+   * FileQueueException은 비즈니스 예외이므로 재시도 없이 즉시 전파된다.
+   * 예외 메시지에 "Queue is full: size 0 >= maxSize 0"이 포함되어야 한다.
    * </p>
    */
   @DisplayName("throw Queue is full exception")
@@ -53,9 +53,8 @@ class MVStoreFileQueueUnitTest {
     // then
     assertThatCode(() -> fileQueue.enqueue("ITEM"))
       .isInstanceOfSatisfying(FileQueueException.class, e -> {
-        assertThat(e.getMessage()).isEqualTo("[MVStoreFileQueue] Failed to execute with write lock after 3 attempts");
-        assertThat(e.getCause()).isInstanceOf(FileQueueException.class);
-        assertThat(e.getCause().getMessage()).isEqualTo("[MVStoreFileQueue] Queue is full: size 0 >= maxSize 0");
+        assertThat(e.getMessage()).contains("Queue is full: size 0 >= maxSize 0");
+        assertThat(e.getCause()).isNull();
       });
   }
 
