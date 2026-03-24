@@ -251,7 +251,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       } catch (Exception e) {
         log.info("[MVStoreFileQueue] Failed to execute with write lock: retry {}", attempt, e);
         exception = e;
-        sleepBackoff();
+        sleepRetry();
       } finally {
         lock.writeLock().unlock();
       }
@@ -274,7 +274,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       } catch (Exception e) {
         log.info("[MVStoreFileQueue] Failed to execute with read lock: retry {}", attempt, e);
         exception = e;
-        sleepBackoff();
+        sleepRetry();
       } finally {
         lock.readLock().unlock();
       }
@@ -317,12 +317,12 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     R get() throws E;
   }
 
-  private void sleepBackoff() {
+  private void sleepRetry() {
     try {
       Thread.sleep(properties.getRetryBackoffMs());
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.warn("Backoff sleep interrupted", ie);
+      log.warn("Retry sleep interrupted", ie);
     }
   }
 
