@@ -217,7 +217,7 @@ class MVStoreFileQueueAdditionalTest {
   void enqueue_afterDequeueAtMaxSizeBoundary() {
     // given
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-    properties.setMaxSize(11); // >= check, so maxSize=11 allows 10 items
+    properties.setMaxSize(11); // single enqueue: >= check, so maxSize=11 allows up to 10 items via single enqueue
     String path = tempDir.resolve("boundary2.db").toFile().getAbsolutePath();
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
 
@@ -235,16 +235,18 @@ class MVStoreFileQueueAdditionalTest {
   }
 
   /**
-   * maxSize=10인 큐에 5개가 있을 때 5개짜리 배치를 삽입하면 예외가 발생하는지 검증한다.
+   * maxSize=10인 큐에 5개가 있을 때 정확히 5개 배치 삽입은 성공하고,
+   * 6개 배치 삽입은 실패하는지 검증한다.
    * <p>
-   * size(5) + list.size(5) = 10 &gt;= maxSize(10) 조건으로 실패해야 하며,
-   * 4개짜리 배치(9 &lt; 10)는 성공해야 한다.
+   * 배치 체크: size() + list.size() &gt; maxSize<br>
+   * - size(5) + batch.size(5) = 10, 10 &gt; 10은 false → 성공 (큐를 가득 채울 수 있음)<br>
+   * - size(10) + batch.size(1) = 11, 11 &gt; 10은 true → 실패
    * </p>
    */
   @DisplayName("batch enqueue at maxSize boundary")
   @Test
   void batchEnqueue_atMaxSizeBoundary() {
-    // given - batch enqueue uses size() + value.size() >= maxSize check
+    // given
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
     properties.setMaxSize(10);
     String path = tempDir.resolve("batch_boundary.db").toFile().getAbsolutePath();
@@ -255,19 +257,15 @@ class MVStoreFileQueueAdditionalTest {
       queue.enqueue("item-" + i);
     }
 
-    // when - try to add 5 more (would make size + list.size = 10, which >= maxSize)
+    // when - size(5) + batch.size(5) = 10 > 10 은 false → 성공 (배치로 최대 용량까지 채울 수 있음)
     List<String> batch = Arrays.asList("batch-0", "batch-1", "batch-2", "batch-3", "batch-4");
+    queue.enqueue(batch);
+    assertThat(queue.size()).isEqualTo(10);
 
-    // then - should fail because size(5) + batch.size(5) = 10 >= maxSize(10)
-    // FileQueueException is propagated immediately (no retry wrapper)
-    assertThatThrownBy(() -> queue.enqueue(batch))
+    // when - 큐가 가득 찬 상태(size=10)에서 단 1개 배치도 초과 → 실패
+    assertThatThrownBy(() -> queue.enqueue(Arrays.asList("overflow")))
         .isInstanceOf(FileQueueException.class)
         .hasMessageContaining("Queue is full");
-
-    // Verify a smaller batch succeeds
-    List<String> smallBatch = Arrays.asList("small-0", "small-1", "small-2", "small-3");
-    queue.enqueue(smallBatch); // size(5) + 4 = 9 < 10, should succeed
-    assertThat(queue.size()).isEqualTo(9);
   }
 
   /**

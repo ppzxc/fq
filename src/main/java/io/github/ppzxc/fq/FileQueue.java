@@ -33,9 +33,9 @@ public interface FileQueue<T> {
   /**
    * Adds all elements in the given list to the tail of this queue atomically.
    *
-   * <p>All elements are validated before any are added. If the combined size
-   * would exceed maxSize, a {@link FileQueueException} is thrown and no elements
-   * are added.</p>
+   * <p>All elements are validated before any are added. If {@code currentSize + list.size > maxSize},
+   * a {@link FileQueueException} is thrown and no elements are added.
+   * Unlike single-element enqueue, a batch can fill the queue exactly to maxSize.</p>
    *
    * @param value the list of elements to add; must not be {@code null} and must
    *              not contain {@code null} elements

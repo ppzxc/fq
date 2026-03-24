@@ -591,33 +591,22 @@ class MVStoreFileQueueCoverageTest {
   }
 
   /**
-   * close()가 이미 닫힌 큐에 대해 lock 내부에서 double-check를 수행하는지 검증한다.
+   * close()가 멱등성(idempotent)을 보장하는지 검증한다.
    * <p>
-   * write lock 획득 후 closed=true 확인 시 return null로 빠져나가야 한다.
-   * 이를 위해 volatile closed 필드를 true로 설정한 뒤 close()를 재호출한다.
+   * close()를 여러 번 호출해도 예외가 발생하지 않아야 한다.
+   * 두 번째 close() 호출은 외부 if (closed) 체크 또는 lock 내부 double-check로
+   * 안전하게 no-op 처리되어야 한다.
    * </p>
    */
   @Test
-  void testClose_alreadyClosedInsideLock() throws Exception {
-    // close()의 double-check locking 내부 return null 경로 커버
-    // closed=false로 외부 체크를 통과하지만 lock 획득 전에 closed=true인 상태를 시뮬레이션
-    // 가장 단순한 방법: 첫 번째 close() 정상 실행 후 closed=false 로 되돌리고 재호출
+  void testClose_alreadyClosedInsideLock() {
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
     MVStoreFileQueue<String> q = new MVStoreFileQueue<>(properties, tempDir.resolve("double-close.db").toString());
-    q.close(); // closed=true, MVStore closed
 
-    // closed를 false로 리셋해서 외부 체크 통과, lock 내부에서 double-check로 잡히도록
-    java.lang.reflect.Field closedField = MVStoreFileQueue.class.getDeclaredField("closed");
-    closedField.setAccessible(true);
-    closedField.set(q, false);
+    // 첫 번째 close() — 정상 동작
+    assertThatCode(q::close).doesNotThrowAnyException();
 
-    // 이제 close() 재호출: 외부 checkClosed 통과 → lock 획득 → 내부 double-check에서 return null
-    // (실제로는 MVStore가 이미 닫혀있어서 commit()이 실패할 수도 있지만,
-    //  double-check return null 경로가 실행되어야 한다)
-    try {
-      q.close();
-    } catch (Exception ignored) {
-      // MVStore already closed may throw, but the branch is still covered
-    }
+    // 두 번째 close() — 멱등성: 예외 없이 no-op
+    assertThatCode(q::close).doesNotThrowAnyException();
   }
 }

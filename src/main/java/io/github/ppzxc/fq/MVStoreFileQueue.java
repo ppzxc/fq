@@ -120,11 +120,13 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       }
     }
     return executeWithWriteLock(() -> {
-      if (size() + value.size() >= properties.getMaxSize()) {
+      if (size() + value.size() > properties.getMaxSize()) {
         throw new FileQueueException("[MVStoreFileQueue] Queue is full: size " + size() + " >= maxSize " + properties.getMaxSize());
       }
-      value.forEach(v -> queue.put(tail.getAndIncrement(), v));
-      commitIfNeeded();
+      value.forEach(v -> {
+        queue.put(tail.getAndIncrement(), v);
+        commitIfNeeded();
+      });
       return true;
     });
   }
@@ -189,16 +191,18 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     if (closed) {
       return;
     }
-    executeWithWriteLock(() -> {
+    lock.writeLock().lock();
+    try {
       if (closed) {
-        return null;
+        return;
       }
       closed = true;
       long newVersion = mvStore.commit();
       log.info("newVersion={} message=close", newVersion);
       mvStore.close();
-      return null;
-    });
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   private void checkClosed() {
