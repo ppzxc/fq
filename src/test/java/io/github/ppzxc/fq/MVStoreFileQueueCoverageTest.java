@@ -158,6 +158,27 @@ class MVStoreFileQueueCoverageTest {
   }
 
   /**
+   * maxSize=2로 설정된 큐가 가득 찼을 때 에러 메시지가 ">=" 형식을 사용하는지 검증한다.
+   * <p>조건이 size >= maxSize 이므로 메시지도 ">=" 기호를 사용해야 한다.</p>
+   */
+  @Test
+  void testEnqueueFullQueueErrorMessage() {
+    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
+    properties.setMaxSize(2);
+    MVStoreFileQueue<String> smallQueue = new MVStoreFileQueue<>(properties, tempDir.resolve("msg-test.db").toString());
+
+    smallQueue.enqueue("one");
+    smallQueue.enqueue("two");
+
+    assertThatThrownBy(() -> smallQueue.enqueue("three"))
+      .isInstanceOf(FileQueueException.class)
+      .cause()
+      .hasMessageContaining("size 2 >= maxSize 2");
+
+    smallQueue.close();
+  }
+
+  /**
    * maxSize=2로 설정된 큐에 1개가 있을 때 2개짜리 리스트를 삽입하면 FileQueueException이 발생하는지 검증한다.
    * <p>size(1) + list.size(2) = 3 &ge; maxSize(2) 조건을 검증한다.</p>
    */
@@ -170,7 +191,9 @@ class MVStoreFileQueueCoverageTest {
     smallQueue.enqueue("one");
     List<String> list = Arrays.asList("two", "three");
     assertThatThrownBy(() -> smallQueue.enqueue(list))
-      .isInstanceOf(FileQueueException.class);
+      .isInstanceOf(FileQueueException.class)
+      .cause()
+      .hasMessageContaining("size 1 >= maxSize 2");
 
     smallQueue.close();
   }

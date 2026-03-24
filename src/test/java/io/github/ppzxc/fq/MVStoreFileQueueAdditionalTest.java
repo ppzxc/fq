@@ -202,7 +202,7 @@ class MVStoreFileQueueAdditionalTest {
     // Note: acquireWriteLock wraps the original exception, so we check the root cause
     assertThatThrownBy(() -> queue.enqueue("item-10"))
         .isInstanceOf(FileQueueException.class)
-        .hasRootCauseMessage("[MVStoreFileQueue] Queue is full: 10 > 10");
+        .hasRootCauseMessage("[MVStoreFileQueue] Queue is full: size 10 >= maxSize 10");
   }
 
   /**

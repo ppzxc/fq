@@ -90,7 +90,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     }
     return executeWithWriteLock(() -> {
       if (size() >= properties.getMaxSize()) {
-        throw new FileQueueException("[MVStoreFileQueue] Queue is full: " + size() + " > " + properties.getMaxSize());
+        throw new FileQueueException("[MVStoreFileQueue] Queue is full: size " + size() + " >= maxSize " + properties.getMaxSize());
       }
       try {
         long key = tail.getAndIncrement();
@@ -121,7 +121,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     }
     return executeWithWriteLock(() -> {
       if (size() + value.size() >= properties.getMaxSize()) {
-        throw new FileQueueException("Queue is full: " + size() + " > " + properties.getMaxSize());
+        throw new FileQueueException("[MVStoreFileQueue] Queue is full: size " + size() + " >= maxSize " + properties.getMaxSize());
       }
       value.forEach(v -> queue.put(tail.getAndIncrement(), v));
       commitIfNeeded();
