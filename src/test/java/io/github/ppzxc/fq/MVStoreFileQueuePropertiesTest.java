@@ -319,17 +319,16 @@ class MVStoreFileQueuePropertiesTest {
     assertThat(properties.getMaxRetry()).isEqualTo(5);
   }
 
-  @DisplayName("setMaxRetry - zero is valid")
+  @DisplayName("setMaxRetry - zero throws exception (must be at least 1)")
   @Test
   void setMaxRetry_zero() {
     // given
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
 
-    // when
-    properties.setMaxRetry(0);
-
-    // then
-    assertThat(properties.getMaxRetry()).isEqualTo(0);
+    // when, then — 0 would cause all operations to fail immediately, so we reject it
+    assertThatThrownBy(() -> properties.setMaxRetry(0))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessage("maxRetry must be at least 1");
   }
 
   @DisplayName("setMaxRetry - negative throws exception")
@@ -341,7 +340,7 @@ class MVStoreFileQueuePropertiesTest {
     // when, then
     assertThatThrownBy(() -> properties.setMaxRetry(-1))
       .isInstanceOf(IllegalArgumentException.class)
-      .hasMessage("maxRetry cannot be negative");
+      .hasMessage("maxRetry must be at least 1");
   }
 
   @DisplayName("setCacheSize - valid value")

@@ -73,8 +73,8 @@ public class MVStoreFileQueueProperties {
   }
 
   public void setMaxRetry(int maxRetry) {
-    if (maxRetry < 0) {
-      throw new IllegalArgumentException("maxRetry cannot be negative");
+    if (maxRetry < 1) {
+      throw new IllegalArgumentException("maxRetry must be at least 1");
     }
     this.maxRetry = maxRetry;
   }
