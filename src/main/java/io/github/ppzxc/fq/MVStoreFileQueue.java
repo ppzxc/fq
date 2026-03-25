@@ -58,7 +58,9 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         builder.autoCommitDisabled();
       }
       this.mvStore = builder.open();
-      this.queue = mvStore.openMap(properties.getQueueName());
+      FQDataType<T> dataType = new FQDataType<>(properties.getAllowedClasses());
+      this.queue = mvStore.openMap(properties.getQueueName(),
+        new MVMap.Builder<Long, T>().valueType(dataType));
       this.head = new AtomicLong();
       this.tail = new AtomicLong();
       this.totalOperation = new AtomicLong();

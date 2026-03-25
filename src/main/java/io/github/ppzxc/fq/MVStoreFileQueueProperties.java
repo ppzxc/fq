@@ -1,9 +1,19 @@
 package io.github.ppzxc.fq;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.Getter;
 
 @Getter
 public class MVStoreFileQueueProperties {
+
+  /**
+   * Whitelist of fully-qualified class names permitted for deserialization.
+   * An empty set means all classes are allowed (backward-compatible default).
+   * When non-empty, only listed classes (and primitive/array wrappers) are permitted.
+   */
+  private Set<String> allowedClasses = Collections.emptySet();
 
   private String queueName = "queue";
   private int batchSize = 1000;
@@ -99,6 +109,13 @@ public class MVStoreFileQueueProperties {
       throw new IllegalArgumentException("compactByFileSize must be positive");
     }
     this.compactByFileSize = compactByFileSize;
+  }
+
+  public void setAllowedClasses(Set<String> allowedClasses) {
+    if (allowedClasses == null) {
+      throw new IllegalArgumentException("allowedClasses cannot be null");
+    }
+    this.allowedClasses = Collections.unmodifiableSet(new HashSet<>(allowedClasses));
   }
 
 }
