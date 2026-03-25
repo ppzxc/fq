@@ -23,7 +23,7 @@
 
 ```groovy
 dependencies {
-    implementation 'io.github.ppzxc:fq:0.0.12'
+    implementation 'io.github.ppzxc:fq:0.0.13'
 }
 ```
 
@@ -33,7 +33,7 @@ dependencies {
 <dependency>
     <groupId>io.github.ppzxc</groupId>
     <artifactId>fq</artifactId>
-    <version>0.0.12</version>
+    <version>0.0.13</version>
 </dependency>
 ```
 
@@ -100,11 +100,9 @@ FileQueue<MyObject> queue2 = FileQueueFactory.createMVStoreFileQueue("/data/queu
 | `compactByFileSize` | `50` | 파일이 이 크기(MB)를 초과하면 `compactFile()` 실행 |
 | `maxCompactTime` | `60000` | 압축 호출당 최대 소요 시간 (ms) |
 | `fair` | `true` | `ReentrantReadWriteLock` 공정 모드 |
-| `tryLockTimeout` | `1` | 락 획득 타임아웃 값 |
-| `tryLockTimeunit` | `SECONDS` | 락 획득 타임아웃 단위 |
-| `maxRetry` | `3` | 최대 락 재시도 횟수 |
-| `retryDelay` | `100` | 재시도 간 기본 대기 시간 (ms) |
-| `retryBackoffMs` | `100` | 지수 백오프 증가량 (ms) |
+| `maxRetry` | `3` | 최대 락 재시도 횟수 (최솟값 1) |
+| `retryBackoffMs` | `100` | 지수 백오프 기본 대기 시간 (ms); 시도마다 2배 증가, 최대 5초 |
+| `allowedClasses` | `[]` | 역직렬화 허용 클래스 완전 한정명 화이트리스트 (CWE-502); 비어있으면 전체 허용 |
 
 ## API 레퍼런스
 

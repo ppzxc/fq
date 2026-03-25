@@ -23,7 +23,7 @@
 
 ```groovy
 dependencies {
-    implementation 'io.github.ppzxc:fq:0.0.12'
+    implementation 'io.github.ppzxc:fq:0.0.13'
 }
 ```
 
@@ -33,7 +33,7 @@ dependencies {
 <dependency>
     <groupId>io.github.ppzxc</groupId>
     <artifactId>fq</artifactId>
-    <version>0.0.12</version>
+    <version>0.0.13</version>
 </dependency>
 ```
 
@@ -100,11 +100,9 @@ All options are set via `MVStoreFileQueueProperties`. Build with the provided bu
 | `compactByFileSize` | `50` | Trigger `compactFile()` when file exceeds this (MB) |
 | `maxCompactTime` | `60000` | Max time spent compacting per call (ms) |
 | `fair` | `true` | Fair mode for `ReentrantReadWriteLock` |
-| `tryLockTimeout` | `1` | Lock acquisition timeout value |
-| `tryLockTimeunit` | `SECONDS` | Lock acquisition timeout unit |
-| `maxRetry` | `3` | Max lock retry attempts |
-| `retryDelay` | `100` | Base delay between retries (ms) |
-| `retryBackoffMs` | `100` | Exponential backoff increment (ms) |
+| `maxRetry` | `3` | Max lock retry attempts (minimum 1) |
+| `retryBackoffMs` | `100` | Exponential backoff base delay (ms); doubles per attempt, capped at 5 s |
+| `allowedClasses` | `[]` | Whitelist of fully-qualified class names for safe deserialization (CWE-502); empty = allow all |
 
 ## API Reference
 
