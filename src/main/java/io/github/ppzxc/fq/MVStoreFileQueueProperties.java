@@ -1,12 +1,19 @@
 package io.github.ppzxc.fq;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
 public class MVStoreFileQueueProperties {
+
+  /**
+   * Whitelist of fully-qualified class names permitted for deserialization.
+   * An empty set means all classes are allowed (backward-compatible default).
+   * When non-empty, only listed classes (and primitive/array wrappers) are permitted.
+   */
+  private Set<String> allowedClasses = Collections.emptySet();
 
   private String queueName = "queue";
   private int batchSize = 1000;
@@ -16,11 +23,8 @@ public class MVStoreFileQueueProperties {
   private boolean autoCommitDisabled = false;
   private int autoCommitBufferSize = 1024;
   private int maxRetry = 3;
-  private long retryDelay = 100;
   private int cacheSize = 1; // 1MB
   private boolean fair = true;
-  private int tryLockTimeout = 1;
-  private TimeUnit tryLockTimeunit = TimeUnit.SECONDS;
   private int retryBackoffMs = 100;
   private int maxCompactTime = 60 * 1000;
   private long compactByFileSize = 50 * 1024 * 1024; // 50 MB
@@ -69,17 +73,10 @@ public class MVStoreFileQueueProperties {
   }
 
   public void setMaxRetry(int maxRetry) {
-    if (maxRetry < 0) {
-      throw new IllegalArgumentException("maxRetry cannot be negative");
+    if (maxRetry < 1) {
+      throw new IllegalArgumentException("maxRetry must be at least 1");
     }
     this.maxRetry = maxRetry;
-  }
-
-  public void setRetryDelay(long retryDelay) {
-    if (retryDelay < 0) {
-      throw new IllegalArgumentException("retryDelay cannot be negative");
-    }
-    this.retryDelay = retryDelay;
   }
 
   public void setCacheSize(int cacheSize) {
@@ -91,20 +88,6 @@ public class MVStoreFileQueueProperties {
 
   public void setFair(boolean fair) {
     this.fair = fair;
-  }
-
-  public void setTryLockTimeout(int tryLockTimeout) {
-    if (tryLockTimeout < 0) {
-      throw new IllegalArgumentException("tryLockTimeout cannot be negative");
-    }
-    this.tryLockTimeout = tryLockTimeout;
-  }
-
-  public void setTryLockTimeunit(TimeUnit tryLockTimeunit) {
-    if (tryLockTimeunit == null) {
-      throw new IllegalArgumentException("tryLockTimeunit cannot be null");
-    }
-    this.tryLockTimeunit = tryLockTimeunit;
   }
 
   public void setRetryBackoffMs(int retryBackoffMs) {
@@ -126,6 +109,13 @@ public class MVStoreFileQueueProperties {
       throw new IllegalArgumentException("compactByFileSize must be positive");
     }
     this.compactByFileSize = compactByFileSize;
+  }
+
+  public void setAllowedClasses(Set<String> allowedClasses) {
+    if (allowedClasses == null) {
+      throw new IllegalArgumentException("allowedClasses cannot be null");
+    }
+    this.allowedClasses = Collections.unmodifiableSet(new HashSet<>(allowedClasses));
   }
 
 }

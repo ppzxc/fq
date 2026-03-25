@@ -954,9 +954,10 @@ class MVStoreFileQueueAdditionalTest {
     queue.dequeue();
     queue.close();
 
-    // when/then - metric() has no checkClosed() guard, so it should not throw
-    assertThatCode(() -> queue.metric("after-close-metric"))
-        .doesNotThrowAnyException();
+    // when/then - metric() now calls checkClosed(), so it should throw after close
+    assertThatThrownBy(() -> queue.metric("after-close-metric"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Queue is already closed");
   }
 
   /**

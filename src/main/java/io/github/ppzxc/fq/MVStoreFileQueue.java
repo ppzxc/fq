@@ -58,20 +58,33 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
         builder.autoCommitDisabled();
       }
       this.mvStore = builder.open();
-      this.queue = mvStore.openMap(properties.getQueueName());
-      this.head = new AtomicLong();
-      this.tail = new AtomicLong();
-      this.totalOperation = new AtomicLong();
-      this.totalCommits = new AtomicLong();
+      try {
+        FQDataType<T> dataType = new FQDataType<>(properties.getAllowedClasses());
+        this.queue = mvStore.openMap(properties.getQueueName(),
+          new MVMap.Builder<Long, T>().valueType(dataType));
+        this.head = new AtomicLong();
+        this.tail = new AtomicLong();
+        this.totalOperation = new AtomicLong();
+        this.totalCommits = new AtomicLong();
 
-      executeWithWriteLock(() -> {
-        this.head.set(queue.firstKey() != null ? queue.firstKey() : 0);
-        this.tail.set(queue.lastKey() != null ? queue.lastKey() + 1 : 0);
-        this.totalOperation.set(0);
-        this.totalCommits.set(0);
-        return null;
-      });
-      log.info("head={} tail={} message=mvStore file queue initialized", head.get(), tail.get());
+        executeWithWriteLock(() -> {
+          this.head.set(queue.firstKey() != null ? queue.firstKey() : 0);
+          this.tail.set(queue.lastKey() != null ? queue.lastKey() + 1 : 0);
+          this.totalOperation.set(0);
+          this.totalCommits.set(0);
+          return null;
+        });
+        if (properties.getMaxSize() == Long.MAX_VALUE) {
+          log.warn("[MVStoreFileQueue] maxSize is Long.MAX_VALUE — queue is unbounded. "
+            + "Consider setting an explicit limit via setMaxSize() to prevent unbounded disk growth.");
+        }
+        log.info("head={} tail={} message=mvStore file queue initialized", head.get(), tail.get());
+      } catch (Exception initEx) {
+        mvStore.closeImmediately(); // prevent resource leak if init fails after mvStore.open()
+        throw initEx;
+      }
+    } catch (FileQueueException fqe) {
+      throw fqe;
     } catch (Exception e) {
       throw new FileQueueException("[MVStoreFileQueue] Failed to initialize queue", e);
     }
@@ -182,8 +195,12 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
 
   @Override
   public void metric(String name) {
-    log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", name,
-      totalOperation.get(), totalCommits.get(), tail.get() - head.get(), head.get(), tail.get());
+    checkClosed();
+    executeWithReadLock(() -> {
+      log.info("name={} total.operations={} total.commits={} current.size={} head={} tail={}", name,
+        totalOperation.get(), totalCommits.get(), tail.get() - head.get(), head.get(), tail.get());
+      return null;
+    });
   }
 
   @Override
@@ -251,7 +268,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       } catch (Exception e) {
         log.info("[MVStoreFileQueue] Failed to execute with write lock: retry {}", attempt, e);
         exception = e;
-        sleepBackoff();
+        sleepRetry(attempt);
       } finally {
         lock.writeLock().unlock();
       }
@@ -274,7 +291,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       } catch (Exception e) {
         log.info("[MVStoreFileQueue] Failed to execute with read lock: retry {}", attempt, e);
         exception = e;
-        sleepBackoff();
+        sleepRetry(attempt);
       } finally {
         lock.readLock().unlock();
       }
@@ -308,6 +325,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     } catch (Exception e) {
       log.error("total={} commits={} batch={} message=commit failed",
         totalOperation.get(), totalCommits.get(), properties.getBatchSize(), e);
+      throw new FileQueueException("[MVStoreFileQueue] Commit failed", e);
     }
   }
 
@@ -317,12 +335,15 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
     R get() throws E;
   }
 
-  private void sleepBackoff() {
+  private static final long MAX_BACKOFF_MS = 5000L;
+
+  private void sleepRetry(int attempt) {
+    long delay = Math.min((long) (properties.getRetryBackoffMs() * Math.pow(2, attempt)), MAX_BACKOFF_MS);
     try {
-      Thread.sleep(properties.getRetryBackoffMs());
+      Thread.sleep(delay);
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.warn("Backoff sleep interrupted", ie);
+      log.warn("Retry sleep interrupted", ie);
     }
   }
 
@@ -340,6 +361,7 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
       return "0";
     }
     int digitGroups = (int) (Math.log10((double) size) / Math.log10(1024));
+    digitGroups = Math.min(digitGroups, UNITS.length - 1);
     return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups];
   }
 

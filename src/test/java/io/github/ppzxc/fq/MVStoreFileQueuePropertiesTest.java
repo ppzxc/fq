@@ -3,7 +3,6 @@ package io.github.ppzxc.fq;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,11 +23,8 @@ class MVStoreFileQueuePropertiesTest {
     assertThat(properties.isAutoCommitDisabled()).isFalse();
     assertThat(properties.getAutoCommitBufferSize()).isEqualTo(1024);
     assertThat(properties.getMaxRetry()).isEqualTo(3);
-    assertThat(properties.getRetryDelay()).isEqualTo(100);
     assertThat(properties.getCacheSize()).isEqualTo(1);
     assertThat(properties.isFair()).isTrue();
-    assertThat(properties.getTryLockTimeout()).isEqualTo(1);
-    assertThat(properties.getTryLockTimeunit()).isEqualTo(TimeUnit.SECONDS);
     assertThat(properties.getRetryBackoffMs()).isEqualTo(100);
     assertThat(properties.getMaxCompactTime()).isEqualTo(60 * 1000);
     assertThat(properties.getCompactByFileSize()).isEqualTo(50 * 1024 * 1024);
@@ -323,17 +319,16 @@ class MVStoreFileQueuePropertiesTest {
     assertThat(properties.getMaxRetry()).isEqualTo(5);
   }
 
-  @DisplayName("setMaxRetry - zero is valid")
+  @DisplayName("setMaxRetry - zero throws exception (must be at least 1)")
   @Test
   void setMaxRetry_zero() {
     // given
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
 
-    // when
-    properties.setMaxRetry(0);
-
-    // then
-    assertThat(properties.getMaxRetry()).isEqualTo(0);
+    // when, then — 0 would cause all operations to fail immediately, so we reject it
+    assertThatThrownBy(() -> properties.setMaxRetry(0))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessage("maxRetry must be at least 1");
   }
 
   @DisplayName("setMaxRetry - negative throws exception")
@@ -345,45 +340,7 @@ class MVStoreFileQueuePropertiesTest {
     // when, then
     assertThatThrownBy(() -> properties.setMaxRetry(-1))
       .isInstanceOf(IllegalArgumentException.class)
-      .hasMessage("maxRetry cannot be negative");
-  }
-
-  @DisplayName("setRetryDelay - valid value")
-  @Test
-  void setRetryDelay_valid() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when
-    properties.setRetryDelay(200);
-
-    // then
-    assertThat(properties.getRetryDelay()).isEqualTo(200);
-  }
-
-  @DisplayName("setRetryDelay - zero is valid")
-  @Test
-  void setRetryDelay_zero() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when
-    properties.setRetryDelay(0);
-
-    // then
-    assertThat(properties.getRetryDelay()).isEqualTo(0);
-  }
-
-  @DisplayName("setRetryDelay - negative throws exception")
-  @Test
-  void setRetryDelay_negative() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when, then
-    assertThatThrownBy(() -> properties.setRetryDelay(-1))
-      .isInstanceOf(IllegalArgumentException.class)
-      .hasMessage("retryDelay cannot be negative");
+      .hasMessage("maxRetry must be at least 1");
   }
 
   @DisplayName("setCacheSize - valid value")
@@ -447,69 +404,6 @@ class MVStoreFileQueuePropertiesTest {
 
     // then
     assertThat(properties.isFair()).isFalse();
-  }
-
-  @DisplayName("setTryLockTimeout - valid value")
-  @Test
-  void setTryLockTimeout_valid() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when
-    properties.setTryLockTimeout(5);
-
-    // then
-    assertThat(properties.getTryLockTimeout()).isEqualTo(5);
-  }
-
-  @DisplayName("setTryLockTimeout - zero is valid")
-  @Test
-  void setTryLockTimeout_zero() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when
-    properties.setTryLockTimeout(0);
-
-    // then
-    assertThat(properties.getTryLockTimeout()).isEqualTo(0);
-  }
-
-  @DisplayName("setTryLockTimeout - negative throws exception")
-  @Test
-  void setTryLockTimeout_negative() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when, then
-    assertThatThrownBy(() -> properties.setTryLockTimeout(-1))
-      .isInstanceOf(IllegalArgumentException.class)
-      .hasMessage("tryLockTimeout cannot be negative");
-  }
-
-  @DisplayName("setTryLockTimeunit - valid value")
-  @Test
-  void setTryLockTimeunit_valid() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when
-    properties.setTryLockTimeunit(TimeUnit.MILLISECONDS);
-
-    // then
-    assertThat(properties.getTryLockTimeunit()).isEqualTo(TimeUnit.MILLISECONDS);
-  }
-
-  @DisplayName("setTryLockTimeunit - null throws exception")
-  @Test
-  void setTryLockTimeunit_null() {
-    // given
-    MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-
-    // when, then
-    assertThatThrownBy(() -> properties.setTryLockTimeunit(null))
-      .isInstanceOf(IllegalArgumentException.class)
-      .hasMessage("tryLockTimeunit cannot be null");
   }
 
   @DisplayName("setRetryBackoffMs - valid value")

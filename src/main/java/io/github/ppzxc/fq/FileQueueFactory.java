@@ -2,6 +2,8 @@ package io.github.ppzxc.fq;
 
 import java.io.Serializable;
 import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @SuppressWarnings("unused")
 public final class FileQueueFactory {
@@ -14,6 +16,10 @@ public final class FileQueueFactory {
     if (fileName == null || fileName.trim().isEmpty()) {
       throw new IllegalArgumentException("[FileQueueFactory] fileName cannot be null or empty");
     }
+    if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+      throw new IllegalArgumentException(
+        "[FileQueueFactory] fileName must not contain path separators or traversal sequences: " + fileName);
+    }
     return new MVStoreFileQueue<>(mvStoreFileQueueProperties,
       String.join(FileSystems.getDefault().getSeparator(), System.getProperty("user.dir"), "sys", "que", fileName));
   }
@@ -23,7 +29,8 @@ public final class FileQueueFactory {
     if (path == null || path.trim().isEmpty()) {
       throw new IllegalArgumentException("[FileQueueFactory] path cannot be null or empty");
     }
-    return new MVStoreFileQueue<>(mvStoreFileQueueProperties, path);
+    Path normalized = Paths.get(path).toAbsolutePath().normalize();
+    return new MVStoreFileQueue<>(mvStoreFileQueueProperties, normalized.toString());
   }
 
   public static <T extends Serializable> FileQueue<T> createMVStoreFileQueue() {

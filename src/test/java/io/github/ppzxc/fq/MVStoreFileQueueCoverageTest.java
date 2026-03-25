@@ -422,17 +422,15 @@ class MVStoreFileQueueCoverageTest {
    * IllegalArgumentException이 발생하는지 검증한다.
    */
   @Test
-  void testConstructorEmptyQueueName() {
+  void testConstructorEmptyQueueName() throws Exception {
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-    try {
-        java.lang.reflect.Field field = MVStoreFileQueueProperties.class.getDeclaredField("queueName");
-        field.setAccessible(true);
-        field.set(properties, "");
+    java.lang.reflect.Field field = MVStoreFileQueueProperties.class.getDeclaredField("queueName");
+    field.setAccessible(true);
+    field.set(properties, "");
 
-        assertThatThrownBy(() -> new MVStoreFileQueue<>(properties, tempDir.resolve("empty-name.db").toString()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("queueName cannot be null or empty");
-    } catch (Exception e) {}
+    assertThatThrownBy(() -> new MVStoreFileQueue<>(properties, tempDir.resolve("empty-name.db").toString()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("queueName cannot be null or empty");
   }
 
   /**
@@ -440,17 +438,15 @@ class MVStoreFileQueueCoverageTest {
    * IllegalArgumentException이 발생하는지 검증한다.
    */
   @Test
-  void testConstructorNullQueueName() {
+  void testConstructorNullQueueName() throws Exception {
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-    try {
-        java.lang.reflect.Field field = MVStoreFileQueueProperties.class.getDeclaredField("queueName");
-        field.setAccessible(true);
-        field.set(properties, null);
+    java.lang.reflect.Field field = MVStoreFileQueueProperties.class.getDeclaredField("queueName");
+    field.setAccessible(true);
+    field.set(properties, null);
 
-        assertThatThrownBy(() -> new MVStoreFileQueue<>(properties, tempDir.resolve("null-name.db").toString()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("queueName cannot be null or empty");
-    } catch (Exception e) {}
+    assertThatThrownBy(() -> new MVStoreFileQueue<>(properties, tempDir.resolve("null-name.db").toString()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("queueName cannot be null or empty");
   }
 
   /**

@@ -77,4 +77,24 @@ class MVStoreFileQueueUnitTest {
     // then
     assertThat(actual).isNull();
   }
+
+  /**
+   * FileQueue가 AutoCloseable을 구현하여 try-with-resources 사용이 가능한지 검증한다.
+   */
+  @DisplayName("FileQueue supports try-with-resources via AutoCloseable")
+  @Test
+  void t3_tryWithResources() {
+    // given
+    MVStoreFileQueueProperties props = new MVStoreFileQueueProperties();
+    String absolutePath = tempDir.resolve(String.format("test_queue_%d.db", System.currentTimeMillis())).toFile()
+      .getAbsolutePath();
+
+    // when, then — must compile and not throw
+    assertThatCode(() -> {
+      try (FileQueue<String> queue = FileQueueFactory.createMVStoreFileQueue(absolutePath, props)) {
+        queue.enqueue("hello");
+        assertThat(queue.dequeue()).isEqualTo("hello");
+      }
+    }).doesNotThrowAnyException();
+  }
 }
