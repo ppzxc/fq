@@ -1,6 +1,7 @@
 package io.github.ppzxc.fq;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
@@ -113,24 +114,20 @@ class MVStoreFileQueueEdgeCaseTest {
     String path = tempDir.resolve("test_queue.db").toFile().getAbsolutePath();
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
 
-    // when
-    queue.compactFile();
-
-    // then - should handle zero size gracefully
+    // when, then - should handle zero size gracefully (no exception)
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
   }
 
-  @DisplayName("readableFileSize - negative size")
+  @DisplayName("readableFileSize - negative size (same as zero — file exists but empty)")
   @Test
   void readableFileSize_negativeSize() {
     // given
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-    String path = tempDir.resolve("test_queue.db").toFile().getAbsolutePath();
+    String path = tempDir.resolve("test_queue_neg.db").toFile().getAbsolutePath();
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
 
-    // when
-    queue.compactFile();
-
-    // then - should handle negative size gracefully
+    // when, then - should handle gracefully (no exception)
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
   }
 
   @DisplayName("latency measurement - nanoseconds")
@@ -143,10 +140,9 @@ class MVStoreFileQueueEdgeCaseTest {
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
     queue.enqueue("item");
 
-    // when
-    queue.compactFile();
-
-    // then - latency should be measured
+    // when, then - compactFile should run without exception
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
+    assertThat(queue.isEmpty()).isFalse();
   }
 
   @DisplayName("latency measurement - microseconds")
@@ -161,10 +157,9 @@ class MVStoreFileQueueEdgeCaseTest {
       queue.enqueue("item" + i);
     }
 
-    // when
-    queue.compactFile();
-
-    // then - latency should be measured
+    // when, then
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
+    assertThat(queue.size()).isEqualTo(100L);
   }
 
   @DisplayName("latency measurement - milliseconds")
@@ -179,10 +174,9 @@ class MVStoreFileQueueEdgeCaseTest {
       queue.enqueue("item" + i);
     }
 
-    // when
-    queue.compactFile();
-
-    // then - latency should be measured
+    // when, then
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
+    assertThat(queue.size()).isEqualTo(1000L);
   }
 
   @DisplayName("latency measurement - seconds")
@@ -198,10 +192,8 @@ class MVStoreFileQueueEdgeCaseTest {
       queue.enqueue("item" + i);
     }
 
-    // when
-    queue.compactFile();
-
-    // then - latency should be measured
+    // when, then — maxCompactTime=1ms so it may exit early, but should not throw
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
   }
 
   @DisplayName("abbreviate - all time units")
@@ -214,25 +206,25 @@ class MVStoreFileQueueEdgeCaseTest {
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
     queue.enqueue("item");
 
-    // when - trigger compactFile which uses abbreviate
-    queue.compactFile();
-
-    // then - should not throw
+    // when, then - should not throw
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
   }
 
-  @DisplayName("backgroundExceptionHandler - handles exceptions")
+  @DisplayName("backgroundExceptionHandler - normal operations do not trigger handler")
   @Test
   void backgroundExceptionHandler_handlesExceptions() {
     // given
     MVStoreFileQueueProperties properties = new MVStoreFileQueueProperties();
-    String path = tempDir.resolve("test_queue.db").toFile().getAbsolutePath();
+    String path = tempDir.resolve("test_queue_bg.db").toFile().getAbsolutePath();
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
 
-    // when - normal operations
+    // when - normal operations should not trigger background exception handler
     queue.enqueue("item");
-    queue.dequeue();
+    String item = queue.dequeue();
 
-    // then - background exception handler is registered
+    // then - item should be retrieved correctly
+    assertThat(item).isEqualTo("item");
+    assertThat(queue.isEmpty()).isTrue();
   }
 
   @DisplayName("dequeue with size - partial dequeue from empty queue")
@@ -261,9 +253,7 @@ class MVStoreFileQueueEdgeCaseTest {
     queue = FileQueueFactory.createMVStoreFileQueue(path, properties);
     queue.enqueue("item");
 
-    // when
-    queue.compactFile();
-
-    // then - should handle file size check gracefully
+    // when, then - should handle file size check gracefully (no exception)
+    assertThatCode(() -> queue.compactFile()).doesNotThrowAnyException();
   }
 }

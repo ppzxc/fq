@@ -74,6 +74,10 @@ class MVStoreFileQueue<T extends Serializable> implements FileQueue<T> {
           this.totalCommits.set(0);
           return null;
         });
+        if (properties.getMaxSize() == Long.MAX_VALUE) {
+          log.warn("[MVStoreFileQueue] maxSize is Long.MAX_VALUE — queue is unbounded. "
+            + "Consider setting an explicit limit via setMaxSize() to prevent unbounded disk growth.");
+        }
         log.info("head={} tail={} message=mvStore file queue initialized", head.get(), tail.get());
       } catch (Exception initEx) {
         mvStore.closeImmediately(); // prevent resource leak if init fails after mvStore.open()
