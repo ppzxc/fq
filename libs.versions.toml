@@ -1,7 +1,7 @@
 [versions]
 org-junit-bom = "5.10.0"
 org-assertj-core = "3.25.3"
-com-h2database-mvstore = "2.2.224"
+com-h2database-mvstore = "2.3.232"
 com-google-guava = "33.4.5-jre"
 org-projectlombok = "1.18.42"
 org-slf4j-api = "1.7.36"
